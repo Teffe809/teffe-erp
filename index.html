@@ -64,6 +64,30 @@
         <i class="ti ti-alert-triangle"></i> <span class="nav-label">Alertas</span>
         <span class="nav-badge" id="nav-alertas-badge"></span>
       </button>
+
+      <div class="sidebar-section">Comercial</div>
+      <button class="nav-item" id="nav-contratos" onclick="erpShowView('contratos')">
+        <i class="ti ti-file-text"></i> <span class="nav-label">Contratos</span>
+      </button>
+
+      <div class="sidebar-section">Financeiro</div>
+      <button class="nav-item" id="nav-fin-dashboard" onclick="erpShowView('fin-dashboard')">
+        <i class="ti ti-chart-bar"></i> <span class="nav-label">Dashboard</span>
+      </button>
+      <button class="nav-item" id="nav-receber" onclick="erpShowView('receber')">
+        <i class="ti ti-arrow-down-circle"></i> <span class="nav-label">Receber</span>
+      </button>
+      <button class="nav-item" id="nav-pagar" onclick="erpShowView('pagar')">
+        <i class="ti ti-arrow-up-circle"></i> <span class="nav-label">Pagar</span>
+      </button>
+      <button class="nav-item" id="nav-fluxo" onclick="erpShowView('fluxo')">
+        <i class="ti ti-trending-up"></i> <span class="nav-label">Fluxo de Caixa</span>
+      </button>
+
+      <div class="sidebar-section">CRM</div>
+      <button class="nav-item" id="nav-prospectos" onclick="erpShowView('prospectos')">
+        <i class="ti ti-users"></i> <span class="nav-label">Prospectos</span>
+      </button>
     </aside>
 
     <!-- CONTEÚDO -->
@@ -103,6 +127,101 @@
           <button class="btn-danger" id="btn-alertas-email" onclick="enviarAlertaEmail()"><i class="ti ti-mail"></i> Enviar alerta por e-mail</button>
         </div>
         <div id="alertas-content"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- CONTRATOS -->
+      <div class="erp-view" id="view-contratos">
+        <div class="view-header">
+          <h1><i class="ti ti-file-text"></i> Contratos</h1>
+          <button class="btn-primary" onclick="abrirModalContrato()"><i class="ti ti-plus"></i> Novo Contrato</button>
+        </div>
+        <div class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- FINANCEIRO DASHBOARD -->
+      <div class="erp-view" id="view-fin-dashboard">
+        <div class="view-header">
+          <h1><i class="ti ti-chart-bar"></i> Dashboard Financeiro</h1>
+        </div>
+        <div id="fin-cards-wrap" class="fin-cards"></div>
+        <div class="bar-chart-wrap">
+          <div class="bar-chart-title">Receitas × Despesas — últimos 6 meses</div>
+          <div id="fin-barchart" class="bar-chart"></div>
+          <div class="bar-legend"><span><i class="rec"></i> Receitas</span><span><i class="des"></i> Despesas</span></div>
+        </div>
+      </div>
+
+      <!-- CONTAS A RECEBER -->
+      <div class="erp-view" id="view-receber">
+        <div class="view-header">
+          <h1><i class="ti ti-arrow-down-circle"></i> Contas a Receber</h1>
+        </div>
+        <div class="view-filters">
+          <select id="fil-rec-status" onchange="carregarReceber()">
+            <option value="">Todos os status</option>
+            <option value="pendente">Pendente</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="pago">Pago</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <input type="month" id="fil-rec-mes" onchange="carregarReceber()"/>
+        </div>
+        <div id="receber-wrap" class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- CONTAS A PAGAR -->
+      <div class="erp-view" id="view-pagar">
+        <div class="view-header">
+          <h1><i class="ti ti-arrow-up-circle"></i> Contas a Pagar</h1>
+          <button class="btn-primary" onclick="abrirModalContaPagar()"><i class="ti ti-plus"></i> Nova Conta</button>
+        </div>
+        <div class="view-filters">
+          <select id="fil-pag-cat" onchange="carregarPagar()">
+            <option value="">Todas as categorias</option>
+            <option value="fornecedor">Fornecedor</option>
+            <option value="aluguel">Aluguel</option>
+            <option value="pro_labore">Pró-labore</option>
+            <option value="lucro_socio">Lucro do Sócio</option>
+            <option value="imposto">Imposto</option>
+            <option value="contador">Contador</option>
+            <option value="funcionario">Funcionário</option>
+            <option value="despesa_geral">Despesa Geral</option>
+            <option value="outro">Outro</option>
+          </select>
+          <select id="fil-pag-status" onchange="carregarPagar()">
+            <option value="">Todos os status</option>
+            <option value="pendente">Pendente</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="pago">Pago</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+          <input type="month" id="fil-pag-mes" onchange="carregarPagar()"/>
+        </div>
+        <div id="pagar-wrap" class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- FLUXO DE CAIXA -->
+      <div class="erp-view" id="view-fluxo">
+        <div class="view-header">
+          <h1><i class="ti ti-trending-up"></i> Fluxo de Caixa</h1>
+        </div>
+        <div class="view-filters">
+          <select id="fil-fluxo-periodo" onchange="carregarFluxo()">
+            <option value="3">3 meses</option>
+            <option value="6" selected>6 meses</option>
+            <option value="12">12 meses</option>
+          </select>
+        </div>
+        <div id="fluxo-wrap" class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- PROSPECTOS -->
+      <div class="erp-view" id="view-prospectos">
+        <div class="view-header">
+          <h1><i class="ti ti-users"></i> Prospectos</h1>
+          <button class="btn-primary" onclick="abrirModalProspecto()"><i class="ti ti-plus"></i> Novo Prospecto</button>
+        </div>
+        <div id="kanban-wrap" class="kanban-wrap"><div class="tbl-loading">Carregando...</div></div>
       </div>
 
     </main>
@@ -203,7 +322,250 @@
   </div>
 </div>
 
+<!-- ══════════════════════ MODAL CONTRATO ══════════════════════ -->
+<div class="modal-overlay" id="modal-contrato" onclick="if(event.target===this)fecharModal('modal-contrato')">
+  <div class="modal-box" style="width:620px;">
+    <div class="modal-header">
+      <h2 id="mc-titulo">Novo Contrato</h2>
+      <button class="modal-close" onclick="fecharModal('modal-contrato')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mc-id"/>
+      <div class="fg"><label>Cliente *</label><select id="mc-cliente"><option value="">Selecione o cliente...</option></select></div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Plano *</label>
+          <select id="mc-plano">
+            <option value="">Selecione...</option>
+            <option value="ouro">Ouro</option>
+            <option value="prata">Prata</option>
+            <option value="bronze">Bronze</option>
+          </select>
+        </div>
+        <div class="fg"><label>Status</label>
+          <select id="mc-status">
+            <option value="ativo">Ativo</option>
+            <option value="em_renovacao">Em renovação</option>
+            <option value="encerrado">Encerrado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Data início *</label><input id="mc-inicio" type="date" oninput="calcularFimContrato()"/></div>
+        <div class="fg"><label>Duração *</label>
+          <select id="mc-duracao" onchange="calcularFimContrato()">
+            <option value="">Selecione...</option>
+            <option value="12">12 meses</option>
+            <option value="24">24 meses</option>
+            <option value="36">36 meses</option>
+            <option value="48">48 meses</option>
+            <option value="60">60 meses</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Data fim (calculada)</label><input id="mc-fim" type="date" readonly style="background:#F9FAFB;color:#6B7280;"/></div>
+        <div class="fg"><label>Dia de vencimento</label><input id="mc-dia-venc" type="number" min="1" max="28" value="10"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Valor mensal (R$) *</label><input id="mc-valor" type="number" step="0.01" min="0" placeholder="0,00"/></div>
+        <div class="fg"><label>Índice de reajuste</label>
+          <select id="mc-indice">
+            <option value="IGP-M">IGP-M</option>
+            <option value="IPCA">IPCA</option>
+            <option value="INPC">INPC</option>
+            <option value="fixo">Fixo</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label>Observação</label><textarea id="mc-obs" placeholder="Observações..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-contrato')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarContrato()">Salvar e Gerar Parcelas</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL PAGAMENTO ══════════════════════ -->
+<div class="modal-overlay" id="modal-pagamento" onclick="if(event.target===this)fecharModal('modal-pagamento')">
+  <div class="modal-box" style="width:400px;">
+    <div class="modal-header">
+      <h2>Marcar como Pago</h2>
+      <button class="modal-close" onclick="fecharModal('modal-pagamento')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mpag-id"/>
+      <input type="hidden" id="mpag-tabela"/>
+      <div class="fg"><label>Data de pagamento *</label><input id="mpag-data" type="date"/></div>
+      <div class="fg"><label>Observação</label><input id="mpag-obs" type="text" placeholder="Opcional"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-pagamento')">Cancelar</button>
+      <button class="btn-primary" onclick="confirmarPagamento()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL CONTA A PAGAR ══════════════════════ -->
+<div class="modal-overlay" id="modal-conta-pagar" onclick="if(event.target===this)fecharModal('modal-conta-pagar')">
+  <div class="modal-box" style="width:580px;">
+    <div class="modal-header">
+      <h2 id="mcp-titulo">Nova Conta a Pagar</h2>
+      <button class="modal-close" onclick="fecharModal('modal-conta-pagar')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mcp-id"/>
+      <div class="fg"><label>Descrição *</label><input id="mcp-desc" type="text" placeholder="Ex: Aluguel sede"/></div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Categoria *</label>
+          <select id="mcp-cat">
+            <option value="">Selecione...</option>
+            <option value="fornecedor">Fornecedor</option>
+            <option value="aluguel">Aluguel</option>
+            <option value="pro_labore">Pró-labore</option>
+            <option value="lucro_socio">Lucro do Sócio</option>
+            <option value="imposto">Imposto</option>
+            <option value="contador">Contador</option>
+            <option value="funcionario">Funcionário</option>
+            <option value="despesa_geral">Despesa Geral</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="fg"><label>Fornecedor</label><select id="mcp-forn"><option value="">Nenhum</option></select></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Valor (R$) *</label><input id="mcp-valor" type="number" step="0.01" min="0" placeholder="0,00"/></div>
+        <div class="fg"><label>Vencimento *</label><input id="mcp-venc" type="date"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Status</label>
+          <select id="mcp-status">
+            <option value="pendente">Pendente</option>
+            <option value="pago">Pago</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+        <div class="fg"><label>Data pagamento</label><input id="mcp-data-pag" type="date"/></div>
+      </div>
+      <div class="fg-check">
+        <input type="checkbox" id="mcp-recorrente"/>
+        <label for="mcp-recorrente">Conta recorrente (mensal)</label>
+      </div>
+      <div class="fg"><label>Observação</label><textarea id="mcp-obs" placeholder="Observações..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-conta-pagar')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarContaPagar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL PROSPECTO ══════════════════════ -->
+<div class="modal-overlay" id="modal-prospecto" onclick="if(event.target===this)fecharModal('modal-prospecto')">
+  <div class="modal-box" style="width:680px;">
+    <div class="modal-header">
+      <h2 id="mpr-titulo">Novo Prospecto</h2>
+      <button class="modal-close" onclick="fecharModal('modal-prospecto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mpr-id"/>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Empresa *</label><input id="mpr-empresa" type="text" placeholder="Nome da empresa"/></div>
+        <div class="fg"><label>Contato *</label><input id="mpr-contato" type="text" placeholder="Nome do responsável"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Cargo</label><input id="mpr-cargo" type="text" placeholder="Gerente de TI, Diretor..."/></div>
+        <div class="fg"><label>Telefone</label><input id="mpr-telefone" type="text" placeholder="(11) 99999-9999"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>E-mail</label><input id="mpr-email" type="email" placeholder="contato@empresa.com"/></div>
+        <div class="fg"><label>Cidade</label><input id="mpr-cidade" type="text" placeholder="São Paulo - SP"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Segmento</label><input id="mpr-segmento" type="text" placeholder="Saúde, Educação, Varejo..."/></div>
+        <div class="fg"><label>Origem</label><input id="mpr-origem" type="text" placeholder="Indicação, LinkedIn, Site..."/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Status</label>
+          <select id="mpr-status">
+            <option value="novo">Novo</option>
+            <option value="em_contato">Em contato</option>
+            <option value="proposta_enviada">Proposta enviada</option>
+            <option value="negociacao">Negociação</option>
+            <option value="ganho">Ganho</option>
+            <option value="perdido">Perdido</option>
+            <option value="inativo">Inativo</option>
+          </select>
+        </div>
+        <div class="fg"><label>Próximo contato</label><input id="mpr-prox" type="date"/></div>
+      </div>
+      <div class="fg"><label>Interesse / Serviço</label><input id="mpr-interesse" type="text" placeholder="Manutenção de impressoras, Contrato mensal..."/></div>
+      <div class="fg"><label>Observação</label><textarea id="mpr-obs" placeholder="Observações gerais..."></textarea></div>
+
+      <div class="modal-section" id="mpr-historico-wrap" style="display:none;">
+        <div class="modal-section-hdr">
+          <span><i class="ti ti-timeline"></i> Histórico de Interações</span>
+          <button class="btn-secondary" style="padding:5px 12px;font-size:12px;" onclick="abrirModalInteracao()"><i class="ti ti-plus"></i> Registrar</button>
+        </div>
+        <ul class="int-list" id="mpr-interacoes"></ul>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-prospecto')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarProspecto()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL INTERAÇÃO ══════════════════════ -->
+<div class="modal-overlay" id="modal-interacao" onclick="if(event.target===this)fecharModal('modal-interacao')">
+  <div class="modal-box" style="width:480px;">
+    <div class="modal-header">
+      <h2>Registrar Interação</h2>
+      <button class="modal-close" onclick="fecharModal('modal-interacao')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mi-prospecto-id"/>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Data *</label><input id="mi-data" type="date"/></div>
+        <div class="fg"><label>Tipo *</label>
+          <select id="mi-tipo">
+            <option value="ligacao">Ligação</option>
+            <option value="email">E-mail</option>
+            <option value="visita">Visita</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="reuniao">Reunião</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label>Descrição *</label><textarea id="mi-desc" placeholder="O que foi discutido/tratado..."></textarea></div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Reação</label>
+          <select id="mi-reacao">
+            <option value="">—</option>
+            <option value="positiva">Positiva</option>
+            <option value="neutra">Neutra</option>
+            <option value="negativa">Negativa</option>
+          </select>
+        </div>
+        <div class="fg"><label>Próximo contato</label><input id="mi-prox" type="date"/></div>
+      </div>
+      <div class="fg"><label>Responsável</label><input id="mi-resp" type="text" placeholder="Nome do responsável"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-interacao')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarInteracao()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/supabase.js"></script>
 <script src="js/estoque.js"></script>
+<script src="js/contratos.js"></script>
+<script src="js/financeiro.js"></script>
+<script src="js/crm.js"></script>
 </body>
 </html>

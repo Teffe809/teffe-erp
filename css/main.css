@@ -113,10 +113,102 @@ body{font-family:var(--font);background:var(--bg);color:#1a1a2e;font-size:14px;}
 .alert-ok{background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:12px;padding:40px;text-align:center;color:#166534;font-weight:600;font-size:15px;}
 .alert-ok i{font-size:36px;display:block;margin-bottom:10px;}
 
+/* ── BADGES PLANO ── */
+.badge-ouro{background:#FEF9C3;color:#854D0E;border:1px solid #FCD34D;}
+.badge-prata{background:#F3F4F6;color:#374151;border:1px solid #9CA3AF;}
+.badge-bronze{background:#FEF3C7;color:#7C2D12;border:1px solid #D97706;}
+.badge-ativo{background:#DCFCE7;color:#166534;}
+.badge-encerrado{background:#F3F4F6;color:#6B7280;}
+.badge-cancelado{background:#FEE2E2;color:#991B1B;}
+.badge-renovacao{background:#EEF2FF;color:#3730A3;}
+.badge-pago{background:#DCFCE7;color:#166534;}
+.badge-pendente{background:#FEF3C7;color:#92400E;}
+.badge-atrasado{background:#FEE2E2;color:#991B1B;}
+.row-vencendo td{background:#FFFBEB !important;}
+.row-atrasado td{background:#FEF2F2 !important;}
+
+/* ── DASHBOARD FINANCEIRO ── */
+.fin-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.fin-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:20px;}
+.fin-card .fc-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#9CA3AF;margin-bottom:8px;}
+.fin-card .fc-value{font-size:24px;font-weight:800;color:#1a1a2e;line-height:1;}
+.fin-card .fc-value.green{color:#16A34A;}
+.fin-card .fc-value.red{color:#DC2626;}
+.fin-card .fc-value.orange{color:#D97706;}
+.fin-card .fc-sub{font-size:12px;color:#9CA3AF;margin-top:6px;}
+
+/* ── BAR CHART ── */
+.bar-chart-wrap{background:#fff;border-radius:12px;border:1px solid var(--border);padding:20px 24px;margin-bottom:28px;}
+.bar-chart-title{font-size:14px;font-weight:700;color:var(--azul);margin-bottom:20px;}
+.bar-chart{display:flex;align-items:flex-end;gap:10px;height:130px;}
+.bar-group{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;}
+.bar-group .bars{display:flex;gap:3px;align-items:flex-end;height:100px;width:100%;}
+.bar{border-radius:3px 3px 0 0;flex:1;transition:opacity .2s;cursor:default;}
+.bar:hover{opacity:.75;}
+.bar.receita{background:var(--azul);}
+.bar.despesa{background:var(--laranja);}
+.bar-lbl{font-size:10px;color:#9CA3AF;margin-top:6px;text-align:center;white-space:nowrap;}
+.bar-legend{display:flex;gap:16px;margin-top:14px;font-size:12px;color:#6B7280;}
+.bar-legend span{display:flex;align-items:center;gap:6px;}
+.bar-legend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+.bar-legend i.rec{background:var(--azul);}
+.bar-legend i.des{background:var(--laranja);}
+
+/* ── FILTROS ── */
+.view-filters{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center;}
+.view-filters select,.view-filters input[type=month]{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;background:#fff;}
+.view-filters select:focus,.view-filters input:focus{border-color:var(--azul);}
+
+/* ── FLUXO DE CAIXA ── */
+.fluxo-table td.pos{color:#16A34A;font-weight:700;}
+.fluxo-table td.neg{color:#DC2626;font-weight:700;}
+.fluxo-table tr.acum-row td{background:#F0F4FA;font-weight:700;border-top:2px solid var(--border);}
+
+/* ── KANBAN ── */
+.kanban-wrap{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;align-items:flex-start;}
+.kanban-col{min-width:190px;flex:1;background:#F4F6F9;border-radius:10px;padding:12px;}
+.kanban-col-hdr{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#6B7280;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.kanban-col-cnt{background:#E5E7EB;color:#6B7280;font-size:10px;font-weight:700;border-radius:20px;padding:1px 7px;}
+.kanban-card{background:#fff;border-radius:8px;padding:12px;margin-bottom:8px;border:1px solid var(--border);cursor:pointer;transition:box-shadow .15s;border-left:3px solid #9CA3AF;}
+.kanban-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.1);}
+.kanban-card.s-novo{border-left-color:#0A4B8D;}
+.kanban-card.s-em_contato{border-left-color:#0284C7;}
+.kanban-card.s-proposta_enviada{border-left-color:#7C3AED;}
+.kanban-card.s-negociacao{border-left-color:#D97706;}
+.kanban-card.s-ganho{border-left-color:#16A34A;}
+.kanban-card.s-perdido{border-left-color:#DC2626;}
+.kanban-card.s-inativo{border-left-color:#9CA3AF;}
+.kc-empresa{font-weight:700;font-size:13px;color:#1a1a2e;margin-bottom:3px;}
+.kc-contato{font-size:12px;color:#6B7280;margin-bottom:4px;}
+.kc-tel{font-size:12px;color:var(--azul);}
+.kc-prox{font-size:11px;margin-top:8px;padding-top:6px;border-top:1px solid #F3F4F6;color:#6B7280;}
+.kc-prox.vencido{color:#DC2626;font-weight:600;}
+
+/* ── INTERAÇÕES ── */
+.int-list{list-style:none;padding:0;}
+.int-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #F3F4F6;}
+.int-item:last-child{border-bottom:none;}
+.int-ico{width:32px;height:32px;border-radius:50%;background:#EBF4FF;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--azul);font-size:15px;}
+.int-body{flex:1;min-width:0;}
+.int-meta{display:flex;justify-content:space-between;margin-bottom:3px;}
+.int-tipo{font-size:11.5px;font-weight:700;color:var(--azul);text-transform:capitalize;}
+.int-data{font-size:11.5px;color:#9CA3AF;}
+.int-desc{font-size:13px;color:#374151;margin-bottom:3px;}
+.int-reacao{font-size:11px;}
+.reacao-positiva{color:#16A34A;font-weight:600;}
+.reacao-negativa{color:#DC2626;font-weight:600;}
+.reacao-neutra{color:#D97706;font-weight:600;}
+.modal-section{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+.modal-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.modal-section-hdr span{font-size:13px;font-weight:700;color:var(--azul);}
+
 /* ── RESPONSIVO ── */
 @media(max-width:768px){
   .erp-sidebar{width:60px;}
   .nav-item span{display:none;}
   .erp-content{padding:16px;}
   .modal-grid-2{grid-template-columns:1fr;}
+  .fin-cards{grid-template-columns:1fr 1fr;}
+  .kanban-wrap{flex-direction:column;}
+  .kanban-col{min-width:unset;}
 }

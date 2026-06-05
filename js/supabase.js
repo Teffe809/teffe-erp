@@ -103,6 +103,12 @@ function erpShowView(view) {
   else if (view === 'fornecedores') carregarFornecedores();
   else if (view === 'entradas') carregarEntradas();
   else if (view === 'alertas') carregarAlertas();
+  else if (view === 'contratos') carregarContratos();
+  else if (view === 'fin-dashboard') carregarDashboardFin();
+  else if (view === 'receber') carregarReceber();
+  else if (view === 'pagar') carregarPagar();
+  else if (view === 'fluxo') carregarFluxo();
+  else if (view === 'prospectos') carregarProspectos();
 }
 
 function fecharModal(id) {

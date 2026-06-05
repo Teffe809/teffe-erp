@@ -18,12 +18,12 @@ async function carregarPecas() {
     else if (estoque <= min) { badge = '<span class="badge badge-low">Baixo</span>'; }
     else { badge = '<span class="badge badge-ok">OK</span>'; }
 
-    const custo = p.custo_unitario ? 'R$ ' + Number(p.custo_unitario).toFixed(2) : '—';
+    const custo = p.custo ? 'R$ ' + Number(p.custo).toFixed(2) : '—';
     const venda = p.preco_venda ? 'R$ ' + Number(p.preco_venda).toFixed(2) : '—';
-    const margem = p.custo_unitario && p.preco_venda
-      ? (((p.preco_venda - p.custo_unitario) / p.custo_unitario) * 100).toFixed(0) + '%'
+    const margem = p.custo && p.preco_venda
+      ? (((p.preco_venda - p.custo) / p.custo) * 100).toFixed(0) + '%'
       : '—';
-    const margemCls = p.preco_venda > p.custo_unitario ? 'margem-pos' : (p.preco_venda < p.custo_unitario ? 'margem-neg' : '');
+    const margemCls = p.preco_venda > p.custo ? 'margem-pos' : (p.preco_venda < p.custo ? 'margem-neg' : '');
     const forn = p.fornecedores ? p.fornecedores.nome : '—';
 
     return '<tr>' +
@@ -54,7 +54,7 @@ async function abrirModalPeca(p) {
   document.getElementById('mp-modelo').value = p ? (p.modelo_equipamento || '') : '';
   document.getElementById('mp-vida-util').value = p ? (p.vida_util_meses || '') : '';
   document.getElementById('mp-estoque-min').value = p ? (p.estoque_minimo || 0) : 0;
-  document.getElementById('mp-custo').value = p ? (p.custo_unitario || '') : '';
+  document.getElementById('mp-custo').value = p ? (p.custo || '') : '';
   document.getElementById('mp-preco-venda').value = p ? (p.preco_venda || '') : '';
   document.getElementById('mp-fornecedor').value = p ? (p.fornecedor_id || '') : '';
   document.getElementById('mp-ativo').checked = p ? (p.ativo !== false) : true;
@@ -70,9 +70,9 @@ async function salvarPeca() {
     codigo: document.getElementById('mp-codigo').value.trim() || null,
     descricao,
     modelo_equipamento: document.getElementById('mp-modelo').value.trim() || null,
-    vida_util_meses: parseInt(document.getElementById('mp-vida-util').value) || null,
+    vida_util_meses: document.getElementById('mp-vida-util').value.trim() || null,
     estoque_minimo: parseInt(document.getElementById('mp-estoque-min').value) || 0,
-    custo_unitario: parseFloat(document.getElementById('mp-custo').value) || null,
+    custo: parseFloat(document.getElementById('mp-custo').value) || null,
     preco_venda: parseFloat(document.getElementById('mp-preco-venda').value) || null,
     fornecedor_id: document.getElementById('mp-fornecedor').value || null,
     ativo: document.getElementById('mp-ativo').checked
@@ -252,7 +252,7 @@ async function salvarEntrada() {
 
   const updateRes = await sf('/rest/v1/pecas?id=eq.' + pecaId, {
     method: 'PATCH',
-    body: JSON.stringify({ estoque_atual: novoEstoque, custo_unitario: custo })
+    body: JSON.stringify({ estoque_atual: novoEstoque, custo: custo })
   });
   if (!updateRes.ok) {
     alert('Entrada registrada mas houve erro ao atualizar estoque. Verifique manualmente.');

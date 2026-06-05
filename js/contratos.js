@@ -92,9 +92,18 @@ async function salvarContrato() {
   if (!duracao) { alert('Selecione a duração.'); return; }
   if (!valor || valor <= 0) { alert('Informe o valor mensal.'); return; }
 
+  var numeroManual = document.getElementById('mc-numero').value.trim();
+  var numero = numeroManual || null;
+  if (!id && !numeroManual) {
+    const countRes = await sf('/rest/v1/contratos?select=id');
+    const total = Array.isArray(countRes.data) ? countRes.data.length : 0;
+    numero = 'CT-' + String(total + 1).padStart(3, '0');
+    document.getElementById('mc-numero').value = numero;
+  }
+
   const payload = {
     cliente_id: clienteId,
-    numero: document.getElementById('mc-numero').value.trim() || null,
+    numero,
     descricao: document.getElementById('mc-descricao').value.trim() || null,
     data_inicio: inicio,
     data_fim: fim,

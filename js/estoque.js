@@ -384,3 +384,40 @@ async function _carregarPecasSelect(selId) {
     sel.appendChild(opt);
   });
 }
+
+/* ═══════════════════════════════════════════════════════
+   MÁSCARAS
+═══════════════════════════════════════════════════════ */
+
+function _mascaraCNPJ(v) {
+  v = v.replace(/\D/g, '').slice(0, 14);
+  if (v.length <= 2) return v;
+  if (v.length <= 5) return v.slice(0, 2) + '.' + v.slice(2);
+  if (v.length <= 8) return v.slice(0, 2) + '.' + v.slice(2, 5) + '.' + v.slice(5);
+  if (v.length <= 12) return v.slice(0, 2) + '.' + v.slice(2, 5) + '.' + v.slice(5, 8) + '/' + v.slice(8);
+  return v.slice(0, 2) + '.' + v.slice(2, 5) + '.' + v.slice(5, 8) + '/' + v.slice(8, 12) + '-' + v.slice(12);
+}
+
+function _mascaraTelefone(v) {
+  v = v.replace(/\D/g, '').slice(0, 11);
+  if (v.length <= 2) return v.length ? '(' + v : '';
+  if (v.length <= 7) return '(' + v.slice(0, 2) + ') ' + v.slice(2);
+  return '(' + v.slice(0, 2) + ') ' + v.slice(2, 7) + '-' + v.slice(7);
+}
+
+function _aplicarMascara(elId, fn) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  el.addEventListener('input', function () {
+    var start = el.selectionStart;
+    var prev = el.value;
+    el.value = fn(prev);
+    var diff = el.value.length - prev.length;
+    el.setSelectionRange(start + diff, start + diff);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  _aplicarMascara('mf-cnpj', _mascaraCNPJ);
+  _aplicarMascara('mf-telefone', _mascaraTelefone);
+});

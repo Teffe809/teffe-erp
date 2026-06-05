@@ -52,8 +52,8 @@ async function erpLogin() {
     _erpTok = authData.access_token;
     const uid = authData.user && authData.user.id;
 
-    const profileRes = await sf('/rest/v1/profiles?user_id=eq.' + uid + '&select=role,nome,email');
-    const profile = profileRes.data && profileRes.data[0];
+    const profileRes = await sf('/rest/v1/profiles?user_id=eq.' + uid + '&select=role');
+    const profile = Array.isArray(profileRes.data) ? profileRes.data[0] : null;
 
     if (!profile || profile.role !== 'admin') {
       _erpTok = null;
@@ -62,7 +62,7 @@ async function erpLogin() {
       return;
     }
 
-    _erpNome = profile.nome || profile.email || email;
+    _erpNome = (authData.user && authData.user.email) || email;
     localStorage.setItem('erp_tok', _erpTok);
     localStorage.setItem('erp_nome', _erpNome);
 

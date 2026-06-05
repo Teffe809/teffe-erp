@@ -128,9 +128,19 @@ async function salvarContrato() {
   if (!res.ok) { alert('Erro ao salvar contrato: ' + JSON.stringify(res.data)); return; }
 
   if (!id) {
-    const contratoId = Array.isArray(res.data) ? res.data[0].id : null;
+    console.log('[salvarContrato] res.data após POST:', res.data);
+    let contratoId = Array.isArray(res.data) && res.data[0] ? res.data[0].id : null;
+    if (!contratoId) {
+      // Prefer: return=representation pode ser bloqueado por RLS sem política SELECT
+      // fallback: busca o contrato recém criado pelo numero
+      const q = await sf('/rest/v1/contratos?numero=eq.' + encodeURIComponent(numero) + '&select=id&order=created_at.desc&limit=1');
+      console.log('[salvarContrato] fallback query por numero:', q.data);
+      contratoId = Array.isArray(q.data) && q.data[0] ? q.data[0].id : null;
+    }
     if (contratoId) {
-      await _gerarParcelas(contratoId, clienteId, inicio, duracao, diaVenc, valor);
+      await _gerarParcelas(contratoId, clienteId, inicio, duracao, diaVenc, valor, numero);
+    } else {
+      console.error('[salvarContrato] contratoId não obtido — parcelas NÃO foram geradas');
     }
   }
 
@@ -138,7 +148,7 @@ async function salvarContrato() {
   carregarContratos();
 }
 
-async function _gerarParcelas(contratoId, clienteId, inicio, duracao, diaVenc, valor) {
+async function _gerarParcelas(contratoId, clienteId, inicio, duracao, diaVenc, valor, numero) {
   const parcelas = [];
   for (var i = 0; i < duracao; i++) {
     var d = new Date(inicio + 'T12:00:00');
@@ -148,23 +158,25 @@ async function _gerarParcelas(contratoId, clienteId, inicio, duracao, diaVenc, v
     parcelas.push({
       contrato_id: contratoId,
       cliente_id: clienteId,
-      descricao: 'Mensalidade ' + _mesAno(d),
+      descricao: 'Mensalidade ' + numero + ' - Mês ' + (i + 1) + '/' + duracao,
       valor: valor,
       vencimento: venc,
       status: 'pendente'
     });
   }
 
-  var lote = [];
-  for (var j = 0; j < parcelas.length; j++) {
-    lote.push(parcelas[j]);
-    if (lote.length === 10 || j === parcelas.length - 1) {
-      await sf('/rest/v1/financeiro_receber', {
-        method: 'POST',
-        body: JSON.stringify(lote),
-        headers: { 'Prefer': 'return=minimal' }
-      });
-      lote = [];
+  console.log('[_gerarParcelas] gerando', parcelas.length, 'parcelas para contrato', contratoId);
+  for (var j = 0; j < parcelas.length; j += 10) {
+    var lote = parcelas.slice(j, j + 10);
+    var res = await sf('/rest/v1/financeiro_receber', {
+      method: 'POST',
+      body: JSON.stringify(lote),
+      headers: { 'Prefer': 'return=minimal' }
+    });
+    if (!res.ok) {
+      console.error('[_gerarParcelas] Erro no lote ' + (j / 10 + 1) + ':', res.status, res.data);
+    } else {
+      console.log('[_gerarParcelas] Lote ' + (j / 10 + 1) + ' inserido OK (' + lote.length + ' parcelas)');
     }
   }
 }

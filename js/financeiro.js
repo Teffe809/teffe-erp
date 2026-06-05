@@ -100,6 +100,16 @@ async function carregarReceber() {
   const { data, ok } = await sf(qs);
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar.</div>'; return; }
 
+  // Busca nomes dos clientes em segunda chamada para evitar join
+  var clienteMap = {};
+  var ids = [...new Set((Array.isArray(data) ? data : []).map(r => r.cliente_id).filter(Boolean))];
+  if (ids.length) {
+    var cRes = await sf('/rest/v1/clientes?select=id,nome,empresa&id=in.(' + ids.join(',') + ')');
+    (Array.isArray(cRes.data) ? cRes.data : []).forEach(function(c) {
+      clienteMap[c.id] = c.nome || c.empresa || c.id;
+    });
+  }
+
   var lista = data.map(function(r) {
     var efStatus = (r.status === 'pendente' && r.vencimento < hoje) ? 'atrasado' : r.status;
     return Object.assign({}, r, { _efStatus: efStatus });
@@ -108,7 +118,7 @@ async function carregarReceber() {
   if (!lista.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhuma conta encontrada.</div>'; return; }
 
   var rows = lista.map(function(r) {
-    var cli = r.cliente_id || '—';
+    var cli = clienteMap[r.cliente_id] || r.cliente_id || '—';
     var venc = r.vencimento ? new Date(r.vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
     var val = 'R$ ' + Number(r.valor).toFixed(2).replace('.', ',');
     var badge = '<span class="badge badge-' + r._efStatus + '">' + _fStatusLabel(r._efStatus) + '</span>';

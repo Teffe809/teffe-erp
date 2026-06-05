@@ -52,7 +52,7 @@ async function erpLogin() {
     _erpTok = authData.access_token;
     const uid = authData.user && authData.user.id;
 
-    const profileRes = await sf('/rest/v1/profiles?user_id=eq.' + uid + '&select=role');
+    const profileRes = await sf('/rest/v1/profiles?id=eq.' + uid + '&select=role');
     const profile = Array.isArray(profileRes.data) ? profileRes.data[0] : null;
 
     if (!profile || profile.role !== 'admin') {

@@ -92,7 +92,7 @@ async function carregarReceber() {
   wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
   const hoje = new Date().toISOString().slice(0,10);
 
-  var qs = '/rest/v1/financeiro_receber?select=*,clientes(nome,empresa),contratos(numero,descricao)&order=vencimento.asc';
+  var qs = '/rest/v1/financeiro_receber?select=id,created_at,contrato_id,cliente_id,descricao,valor,vencimento,status,data_pagamento,observacao,clientes(nome,empresa)&order=vencimento.asc';
   var status = document.getElementById('fil-rec-status').value;
   var mes = document.getElementById('fil-rec-mes').value;
   if (mes) { var _p = mes.split('-'); qs += '&vencimento=gte.' + mes + '-01&vencimento=lte.' + mes + '-' + _ultimoDiaMes(+_p[0], +_p[1]); }

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ERP — Teffe Tecnologia</title>
+<link rel="stylesheet" href="css/main.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+</head>
+<body>
+
+<!-- ══════════════════════ LOGIN ══════════════════════ -->
+<div id="erp-login">
+  <div class="login-box">
+    <div class="login-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="198 26 314 120" style="height:34px;width:auto;">
+        <text font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="76" x="200" y="103"><tspan fill="#0A4B8D">TE</tspan><tspan fill="#F87A13">FFE</tspan></text>
+        <rect x="200" y="111" width="310" height="3" rx="1.5" fill="#F87A13"/>
+        <text x="202" y="139" font-family="Arial,sans-serif" font-weight="700" font-size="15" fill="#F87A13" letter-spacing="6">TECNOLOGIA</text>
+      </svg>
+      <span class="login-tag">ERP</span>
+    </div>
+    <h2>Acesso ao sistema</h2>
+    <div id="login-erro" class="erro-msg"></div>
+    <div class="fg"><label>E-mail</label><input id="l-email" type="email" placeholder="admin@teffe.com.br" autocomplete="username"/></div>
+    <div class="fg"><label>Senha</label><input id="l-senha" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
+    <button id="l-btn" class="btn-login-main" onclick="erpLogin()">Entrar →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════ APP ══════════════════════ -->
+<div id="erp-app" style="display:none;">
+
+  <header class="erp-header">
+    <div class="header-left">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="198 26 314 120" style="height:28px;width:auto;">
+        <text font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="76" x="200" y="103"><tspan fill="#fff">TE</tspan><tspan fill="#F87A13">FFE</tspan></text>
+        <rect x="200" y="111" width="310" height="3" rx="1.5" fill="#F87A13"/>
+        <text x="202" y="139" font-family="Arial,sans-serif" font-weight="700" font-size="15" fill="#F87A13" letter-spacing="6">TECNOLOGIA</text>
+      </svg>
+      <span class="erp-tag">ERP</span>
+    </div>
+    <div class="header-right">
+      <span id="erp-user-nome"></span>
+      <button class="btn-sair" onclick="erpLogout()"><i class="ti ti-logout"></i> Sair</button>
+    </div>
+  </header>
+
+  <div class="erp-body">
+
+    <!-- SIDEBAR -->
+    <aside class="erp-sidebar">
+      <div class="sidebar-section">Estoque</div>
+      <button class="nav-item active" id="nav-pecas" onclick="erpShowView('pecas')">
+        <i class="ti ti-puzzle"></i> <span>Peças</span>
+      </button>
+      <button class="nav-item" id="nav-fornecedores" onclick="erpShowView('fornecedores')">
+        <i class="ti ti-truck"></i> <span>Fornecedores</span>
+      </button>
+      <button class="nav-item" id="nav-entradas" onclick="erpShowView('entradas')">
+        <i class="ti ti-package-import"></i> <span>Entradas</span>
+      </button>
+      <button class="nav-item" id="nav-alertas" onclick="erpShowView('alertas')">
+        <i class="ti ti-alert-triangle"></i> <span>Alertas</span>
+      </button>
+    </aside>
+
+    <!-- CONTEÚDO -->
+    <main class="erp-content">
+
+      <!-- PEÇAS -->
+      <div class="erp-view active" id="view-pecas">
+        <div class="view-header">
+          <h1><i class="ti ti-puzzle"></i> Peças</h1>
+          <button class="btn-primary" onclick="abrirModalPeca()"><i class="ti ti-plus"></i> Nova Peça</button>
+        </div>
+        <div class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- FORNECEDORES -->
+      <div class="erp-view" id="view-fornecedores">
+        <div class="view-header">
+          <h1><i class="ti ti-truck"></i> Fornecedores</h1>
+          <button class="btn-primary" onclick="abrirModalFornecedor()"><i class="ti ti-plus"></i> Novo Fornecedor</button>
+        </div>
+        <div class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- ENTRADAS -->
+      <div class="erp-view" id="view-entradas">
+        <div class="view-header">
+          <h1><i class="ti ti-package-import"></i> Entradas de Estoque</h1>
+          <button class="btn-primary" onclick="abrirModalEntrada()"><i class="ti ti-plus"></i> Nova Entrada</button>
+        </div>
+        <div class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- ALERTAS -->
+      <div class="erp-view" id="view-alertas">
+        <div class="view-header">
+          <h1><i class="ti ti-alert-triangle"></i> Alertas de Estoque</h1>
+          <button class="btn-danger" id="btn-alertas-email" onclick="enviarAlertaEmail()"><i class="ti ti-mail"></i> Enviar alerta por e-mail</button>
+        </div>
+        <div id="alertas-content"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL PEÇA ══════════════════════ -->
+<div class="modal-overlay" id="modal-peca" onclick="if(event.target===this)fecharModal('modal-peca')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="mp-titulo">Nova Peça</h2>
+      <button class="modal-close" onclick="fecharModal('modal-peca')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mp-id"/>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Código</label><input id="mp-codigo" type="text" placeholder="P001"/></div>
+        <div class="fg"><label>Descrição *</label><input id="mp-descricao" type="text" placeholder="Nome da peça"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Modelo de equipamento</label><input id="mp-modelo" type="text" placeholder="Ex: HP LaserJet Pro M428"/></div>
+        <div class="fg"><label>Vida útil (meses)</label><input id="mp-vida-util" type="number" min="0" placeholder="0"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Estoque mínimo</label><input id="mp-estoque-min" type="number" min="0" value="0"/></div>
+        <div class="fg"><label>Fornecedor</label><select id="mp-fornecedor"><option value="">Selecione...</option></select></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Custo (R$)</label><input id="mp-custo" type="number" step="0.01" min="0" placeholder="0,00"/></div>
+        <div class="fg"><label>Preço de venda (R$)</label><input id="mp-preco-venda" type="number" step="0.01" min="0" placeholder="0,00"/></div>
+      </div>
+      <div class="fg-check">
+        <input type="checkbox" id="mp-ativo" checked/>
+        <label for="mp-ativo">Peça ativa</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-peca')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarPeca()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL FORNECEDOR ══════════════════════ -->
+<div class="modal-overlay" id="modal-fornecedor" onclick="if(event.target===this)fecharModal('modal-fornecedor')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="mf-titulo">Novo Fornecedor</h2>
+      <button class="modal-close" onclick="fecharModal('modal-fornecedor')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mf-id"/>
+      <div class="fg"><label>Nome *</label><input id="mf-nome" type="text" placeholder="Razão social ou nome fantasia"/></div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>CNPJ</label><input id="mf-cnpj" type="text" placeholder="00.000.000/0001-00"/></div>
+        <div class="fg"><label>Telefone</label><input id="mf-telefone" type="text" placeholder="(11) 9 0000-0000"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>E-mail</label><input id="mf-email" type="email" placeholder="contato@fornecedor.com"/></div>
+        <div class="fg"><label>Contato (pessoa)</label><input id="mf-contato" type="text" placeholder="Nome do responsável"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-fornecedor')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarFornecedor()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL ENTRADA ══════════════════════ -->
+<div class="modal-overlay" id="modal-entrada" onclick="if(event.target===this)fecharModal('modal-entrada')">
+  <div class="modal-box" style="width:620px;">
+    <div class="modal-header">
+      <h2>Nova Entrada de Estoque</h2>
+      <button class="modal-close" onclick="fecharModal('modal-entrada')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg"><label>Peça *</label><select id="me-peca"><option value="">Selecione a peça...</option></select></div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Fornecedor *</label><select id="me-fornecedor"><option value="">Selecione...</option></select></div>
+        <div class="fg"><label>Quantidade *</label><input id="me-quantidade" type="number" min="1" value="1"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Custo unitário (R$) *</label><input id="me-custo-unit" type="number" step="0.01" min="0" placeholder="0,00"/></div>
+        <div class="fg"><label>Nota fiscal</label><input id="me-nota-fiscal" type="text" placeholder="NF-0001"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Data da compra</label><input id="me-data-compra" type="date"/></div>
+        <div class="fg"><label>Entrega prevista</label><input id="me-data-entrega" type="date"/></div>
+      </div>
+      <div class="fg"><label>Rastreio</label><input id="me-rastreio" type="text" placeholder="Código de rastreamento"/></div>
+      <div class="fg"><label>Observação</label><textarea id="me-observacao" placeholder="Observações adicionais..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-entrada')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarEntrada()">Registrar Entrada</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/supabase.js"></script>
+<script src="js/estoque.js"></script>
+</body>
+</html>

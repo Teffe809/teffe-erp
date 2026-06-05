@@ -1,5 +1,8 @@
 /* ═══════════════════════════════════════════════════════
    CONTRATOS
+   Colunas reais: id, created_at, cliente_id, numero,
+   descricao, data_inicio, data_fim, valor_mensal, status,
+   dia_vencimento, duracao_meses, indice_reajuste, observacao
 ═══════════════════════════════════════════════════════ */
 
 async function carregarContratos() {
@@ -9,12 +12,11 @@ async function carregarContratos() {
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar contratos.</div>'; return; }
   if (!data.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum contrato cadastrado.</div>'; return; }
 
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
   const rows = data.map(function(c) {
     const fim = new Date(c.data_fim + 'T12:00:00');
     const diasFim = Math.ceil((fim - hoje) / 86400000);
     const cliente = c.clientes ? (c.clientes.nome || c.clientes.empresa || '—') : '—';
-    const planoBadge = '<span class="badge badge-' + c.plano + '">' + c.plano.charAt(0).toUpperCase() + c.plano.slice(1) + '</span>';
     const statusBadge = '<span class="badge badge-' + c.status + '">' + _cStatusLabel(c.status) + '</span>';
     const valor = 'R$ ' + Number(c.valor_mensal).toFixed(2).replace('.', ',');
     const dtInicio = new Date(c.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR');
@@ -27,10 +29,11 @@ async function carregarContratos() {
     const rowCls = diasFim <= 60 && c.status === 'ativo' ? ' class="row-vencendo"' : '';
     return '<tr' + rowCls + '>' +
       '<td><strong>' + _esc(cliente) + '</strong></td>' +
-      '<td>' + planoBadge + '</td>' +
+      '<td>' + _esc(c.numero || '—') + '</td>' +
+      '<td>' + _esc(c.descricao || '—') + '</td>' +
       '<td>' + dtInicio + '</td>' +
       '<td>' + dtFim + '</td>' +
-      '<td>' + c.duracao_meses + ' meses</td>' +
+      '<td>' + (c.duracao_meses || '—') + ' meses</td>' +
       '<td><strong>' + valor + '</strong></td>' +
       '<td>' + statusBadge + '</td>' +
       '<td>' + diasLabel + '</td>' +
@@ -43,7 +46,7 @@ async function carregarContratos() {
   }).join('');
 
   wrap.innerHTML = '<table class="erp-table">' +
-    '<thead><tr><th>Cliente</th><th>Plano</th><th>Início</th><th>Fim</th><th>Duração</th><th>Valor/mês</th><th>Status</th><th>Vencimento</th><th></th></tr></thead>' +
+    '<thead><tr><th>Cliente</th><th>Número</th><th>Descrição</th><th>Início</th><th>Fim</th><th>Duração</th><th>Valor/mês</th><th>Status</th><th>Vencimento</th><th></th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>';
 }
 
@@ -52,7 +55,8 @@ async function abrirModalContrato(c) {
   document.getElementById('mc-id').value = c ? c.id : '';
   document.getElementById('mc-titulo').textContent = c ? 'Editar Contrato' : 'Novo Contrato';
   document.getElementById('mc-cliente').value = c ? (c.cliente_id || '') : '';
-  document.getElementById('mc-plano').value = c ? (c.plano || '') : '';
+  document.getElementById('mc-numero').value = c ? (c.numero || '') : '';
+  document.getElementById('mc-descricao').value = c ? (c.descricao || '') : '';
   document.getElementById('mc-status').value = c ? (c.status || 'ativo') : 'ativo';
   document.getElementById('mc-inicio').value = c ? (c.data_inicio || '') : '';
   document.getElementById('mc-duracao').value = c ? (c.duracao_meses || '') : '';
@@ -77,7 +81,6 @@ function calcularFimContrato() {
 async function salvarContrato() {
   const id = document.getElementById('mc-id').value;
   const clienteId = document.getElementById('mc-cliente').value;
-  const plano = document.getElementById('mc-plano').value;
   const inicio = document.getElementById('mc-inicio').value;
   const duracao = parseInt(document.getElementById('mc-duracao').value);
   const fim = document.getElementById('mc-fim').value;
@@ -85,14 +88,14 @@ async function salvarContrato() {
   const diaVenc = parseInt(document.getElementById('mc-dia-venc').value) || 10;
 
   if (!clienteId) { alert('Selecione o cliente.'); return; }
-  if (!plano) { alert('Selecione o plano.'); return; }
   if (!inicio) { alert('Informe a data de início.'); return; }
   if (!duracao) { alert('Selecione a duração.'); return; }
   if (!valor || valor <= 0) { alert('Informe o valor mensal.'); return; }
 
   const payload = {
     cliente_id: clienteId,
-    plano,
+    numero: document.getElementById('mc-numero').value.trim() || null,
+    descricao: document.getElementById('mc-descricao').value.trim() || null,
     data_inicio: inicio,
     data_fim: fim,
     duracao_meses: duracao,
@@ -189,7 +192,7 @@ async function _carregarClientesSelect(selId) {
 }
 
 function _cStatusLabel(s) {
-  return { ativo:'Ativo', encerrado:'Encerrado', cancelado:'Cancelado', em_renovacao:'Em Renovação' }[s] || s;
+  return { ativo: 'Ativo', encerrado: 'Encerrado', cancelado: 'Cancelado', em_renovacao: 'Em Renovação' }[s] || s;
 }
 
 function _mesAno(d) {

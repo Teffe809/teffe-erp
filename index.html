@@ -333,14 +333,7 @@
       <input type="hidden" id="mc-id"/>
       <div class="fg"><label>Cliente *</label><select id="mc-cliente"><option value="">Selecione o cliente...</option></select></div>
       <div class="modal-grid-2">
-        <div class="fg"><label>Plano *</label>
-          <select id="mc-plano">
-            <option value="">Selecione...</option>
-            <option value="ouro">Ouro</option>
-            <option value="prata">Prata</option>
-            <option value="bronze">Bronze</option>
-          </select>
-        </div>
+        <div class="fg"><label>Número do contrato</label><input id="mc-numero" type="text" placeholder="CT-001"/></div>
         <div class="fg"><label>Status</label>
           <select id="mc-status">
             <option value="ativo">Ativo</option>
@@ -378,6 +371,7 @@
           </select>
         </div>
       </div>
+      <div class="fg"><label>Descrição</label><input id="mc-descricao" type="text" placeholder="Ex: Manutenção mensal de impressoras"/></div>
       <div class="fg"><label>Observação</label><textarea id="mc-obs" placeholder="Observações..."></textarea></div>
     </div>
     <div class="modal-footer">

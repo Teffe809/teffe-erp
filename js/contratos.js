@@ -5,7 +5,7 @@
 async function carregarContratos() {
   const wrap = document.querySelector('#view-contratos .table-wrap');
   wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
-  const { data, ok } = await sf('/rest/v1/contratos?select=*,clientes(nome_fantasia,razao_social)&order=data_fim.asc');
+  const { data, ok } = await sf('/rest/v1/contratos?select=*,clientes(nome,empresa)&order=data_fim.asc');
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar contratos.</div>'; return; }
   if (!data.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum contrato cadastrado.</div>'; return; }
 
@@ -13,7 +13,7 @@ async function carregarContratos() {
   const rows = data.map(function(c) {
     const fim = new Date(c.data_fim + 'T12:00:00');
     const diasFim = Math.ceil((fim - hoje) / 86400000);
-    const cliente = c.clientes ? (c.clientes.nome_fantasia || c.clientes.razao_social || '—') : '—';
+    const cliente = c.clientes ? (c.clientes.nome || c.clientes.empresa || '—') : '—';
     const planoBadge = '<span class="badge badge-' + c.plano + '">' + c.plano.charAt(0).toUpperCase() + c.plano.slice(1) + '</span>';
     const statusBadge = '<span class="badge badge-' + c.status + '">' + _cStatusLabel(c.status) + '</span>';
     const valor = 'R$ ' + Number(c.valor_mensal).toFixed(2).replace('.', ',');
@@ -175,14 +175,14 @@ async function excluirContrato(id) {
 }
 
 async function _carregarClientesSelect(selId) {
-  const { data } = await sf('/rest/v1/clientes?select=id,nome_fantasia,razao_social,nome&order=nome_fantasia.asc');
+  const { data } = await sf('/rest/v1/clientes?select=id,nome,empresa&order=nome.asc');
   const sel = document.getElementById(selId);
   const cur = sel.value;
   sel.innerHTML = '<option value="">Selecione o cliente...</option>';
   (Array.isArray(data) ? data : []).forEach(function(c) {
     var opt = document.createElement('option');
     opt.value = c.id;
-    opt.textContent = c.nome_fantasia || c.razao_social || c.nome || c.id;
+    opt.textContent = c.nome || c.empresa || c.id;
     sel.appendChild(opt);
   });
   if (cur) sel.value = cur;

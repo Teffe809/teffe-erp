@@ -92,7 +92,7 @@ async function carregarReceber() {
   wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
   const hoje = new Date().toISOString().slice(0,10);
 
-  var qs = '/rest/v1/financeiro_receber?select=*,clientes(nome_fantasia,razao_social),contratos(plano)&order=vencimento.asc';
+  var qs = '/rest/v1/financeiro_receber?select=*,clientes(nome,empresa),contratos(plano)&order=vencimento.asc';
   var status = document.getElementById('fil-rec-status').value;
   var mes = document.getElementById('fil-rec-mes').value;
   if (mes) { qs += '&vencimento=gte.' + mes + '-01&vencimento=lte.' + mes + '-31'; }
@@ -108,7 +108,7 @@ async function carregarReceber() {
   if (!lista.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhuma conta encontrada.</div>'; return; }
 
   var rows = lista.map(function(r) {
-    var cli = r.clientes ? (r.clientes.nome_fantasia || r.clientes.razao_social) : '—';
+    var cli = r.clientes ? (r.clientes.nome || r.clientes.empresa) : '—';
     var venc = r.vencimento ? new Date(r.vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
     var val = 'R$ ' + Number(r.valor).toFixed(2).replace('.', ',');
     var badge = '<span class="badge badge-' + r._efStatus + '">' + _fStatusLabel(r._efStatus) + '</span>';

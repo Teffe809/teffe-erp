@@ -3,15 +3,68 @@ const SKEY = 'sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
 const EDGE_EMAIL = SURL + '/functions/v1/enviar-email';
 
 let _erpTok = null;
+let _erpRefresh = null;
 let _erpNome = '';
+let _refreshando = false;
 
 async function sf(path, opts) {
+  const res = await _sfRaw(path, opts);
+
+  // JWT expirado: tenta refresh uma vez
+  if (res.status === 401 || (res.data && res.data.message === 'JWT expired')) {
+    const renovado = await _tentarRefresh();
+    if (!renovado) { erpLogoutExpired(); return { data: null, ok: false, status: 401 }; }
+    return _sfRaw(path, opts);
+  }
+
+  return res;
+}
+
+async function _sfRaw(path, opts) {
   const h = { 'apikey': SKEY, 'Content-Type': 'application/json' };
   if (_erpTok) h['Authorization'] = 'Bearer ' + _erpTok;
   const r = await fetch(SURL + path, { ...opts, headers: { ...h, ...(opts && opts.headers || {}) } });
   let data = null;
   try { data = await r.json(); } catch (e) {}
   return { data, ok: r.ok, status: r.status };
+}
+
+async function _tentarRefresh() {
+  if (_refreshando) return false;
+  if (!_erpRefresh) return false;
+  _refreshando = true;
+  try {
+    const r = await fetch(SURL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'apikey': SKEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: _erpRefresh })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.access_token) return false;
+    _erpTok = d.access_token;
+    _erpRefresh = d.refresh_token || _erpRefresh;
+    localStorage.setItem('erp_tok', _erpTok);
+    localStorage.setItem('erp_refresh', _erpRefresh);
+    return true;
+  } catch (e) {
+    return false;
+  } finally {
+    _refreshando = false;
+  }
+}
+
+function erpLogoutExpired() {
+  _erpTok = null; _erpRefresh = null; _erpNome = '';
+  localStorage.removeItem('erp_tok');
+  localStorage.removeItem('erp_refresh');
+  localStorage.removeItem('erp_nome');
+  document.getElementById('erp-app').style.display = 'none';
+  document.getElementById('erp-login').style.display = 'flex';
+  document.getElementById('l-email').value = '';
+  document.getElementById('l-senha').value = '';
+  document.getElementById('l-btn').textContent = 'Entrar →';
+  document.getElementById('l-btn').disabled = false;
+  _erpErro('Sessão expirada, faça login novamente.');
 }
 
 async function erpEnviarEmail(to, subject, html) {
@@ -26,11 +79,10 @@ async function erpEnviarEmail(to, subject, html) {
 
 async function erpLogin() {
   const btn = document.getElementById('l-btn');
-  const erro = document.getElementById('login-erro');
   const email = document.getElementById('l-email').value.trim();
   const senha = document.getElementById('l-senha').value;
 
-  erro.style.display = 'none';
+  document.getElementById('login-erro').style.display = 'none';
   if (!email || !senha) { _erpErro('Preencha e-mail e senha.'); return; }
 
   btn.textContent = 'Entrando...';
@@ -50,13 +102,14 @@ async function erpLogin() {
     }
 
     _erpTok = authData.access_token;
+    _erpRefresh = authData.refresh_token || null;
     const uid = authData.user && authData.user.id;
 
-    const profileRes = await sf('/rest/v1/profiles?id=eq.' + uid + '&select=role');
+    const profileRes = await _sfRaw('/rest/v1/profiles?id=eq.' + uid + '&select=role');
     const profile = Array.isArray(profileRes.data) ? profileRes.data[0] : null;
 
     if (!profile || profile.role !== 'admin') {
-      _erpTok = null;
+      _erpTok = null; _erpRefresh = null;
       _erpErro('Acesso negado. Apenas administradores podem acessar o ERP.');
       btn.textContent = 'Entrar →'; btn.disabled = false;
       return;
@@ -64,6 +117,7 @@ async function erpLogin() {
 
     _erpNome = (authData.user && authData.user.email) || email;
     localStorage.setItem('erp_tok', _erpTok);
+    localStorage.setItem('erp_refresh', _erpRefresh || '');
     localStorage.setItem('erp_nome', _erpNome);
 
     _mostrarApp();
@@ -74,9 +128,9 @@ async function erpLogin() {
 }
 
 function erpLogout() {
-  _erpTok = null;
-  _erpNome = '';
+  _erpTok = null; _erpRefresh = null; _erpNome = '';
   localStorage.removeItem('erp_tok');
+  localStorage.removeItem('erp_refresh');
   localStorage.removeItem('erp_nome');
   document.getElementById('erp-app').style.display = 'none';
   document.getElementById('erp-login').style.display = 'flex';
@@ -123,9 +177,11 @@ function _erpErro(msg) {
 
 document.addEventListener('DOMContentLoaded', function () {
   const tok = localStorage.getItem('erp_tok');
+  const refresh = localStorage.getItem('erp_refresh');
   const nome = localStorage.getItem('erp_nome');
   if (tok) {
     _erpTok = tok;
+    _erpRefresh = refresh || null;
     _erpNome = nome || '';
     _mostrarApp();
   }

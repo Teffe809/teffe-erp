@@ -48,7 +48,7 @@ async function carregarContratos() {
 }
 
 async function abrirModalContrato(c) {
-  await _carregarClientesSelect('mc-cliente');
+  try { await _carregarClientesSelect('mc-cliente'); } catch(e) { console.warn('[Contratos] falha ao carregar clientes:', e); }
   document.getElementById('mc-id').value = c ? c.id : '';
   document.getElementById('mc-titulo').textContent = c ? 'Editar Contrato' : 'Novo Contrato';
   document.getElementById('mc-cliente').value = c ? (c.cliente_id || '') : '';
@@ -175,14 +175,14 @@ async function excluirContrato(id) {
 }
 
 async function _carregarClientesSelect(selId) {
-  const { data } = await sf('/rest/v1/clientes?select=id,nome_fantasia,razao_social&order=nome_fantasia.asc');
+  const { data } = await sf('/rest/v1/clientes?select=id,nome_fantasia,razao_social,nome&order=nome_fantasia.asc');
   const sel = document.getElementById(selId);
   const cur = sel.value;
   sel.innerHTML = '<option value="">Selecione o cliente...</option>';
-  (data || []).forEach(function(c) {
+  (Array.isArray(data) ? data : []).forEach(function(c) {
     var opt = document.createElement('option');
     opt.value = c.id;
-    opt.textContent = c.nome_fantasia || c.razao_social || c.id;
+    opt.textContent = c.nome_fantasia || c.razao_social || c.nome || c.id;
     sel.appendChild(opt);
   });
   if (cur) sel.value = cur;

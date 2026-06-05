@@ -410,7 +410,7 @@ async function _carregarFornecedoresSelect(selId) {
   const sel = document.getElementById(selId);
   const currentVal = sel.value;
   sel.innerHTML = '<option value="">Selecione...</option>';
-  (data || []).forEach(function (f) {
+  (Array.isArray(data) ? data : []).forEach(function (f) {
     const opt = document.createElement('option');
     opt.value = f.id;
     opt.textContent = f.nome;
@@ -423,7 +423,7 @@ async function _carregarPecasSelect(selId) {
   const { data } = await sf('/rest/v1/pecas?select=id,descricao,codigo&ativo=eq.true&order=descricao.asc');
   const sel = document.getElementById(selId);
   sel.innerHTML = '<option value="">Selecione a peça...</option>';
-  (data || []).forEach(function (p) {
+  (Array.isArray(data) ? data : []).forEach(function (p) {
     const opt = document.createElement('option');
     opt.value = p.id;
     opt.textContent = p.descricao + (p.codigo ? ' (' + p.codigo + ')' : '');

@@ -5,7 +5,7 @@
 async function carregarDashboardFin() {
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   const mesInicio = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0') + '-01';
-  const mesFim = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0') + '-31';
+  const mesFim = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0') + '-' + _ultimoDiaMes(hoje.getFullYear(), hoje.getMonth()+1);
 
   const [recRes, pagRes] = await Promise.all([
     sf('/rest/v1/financeiro_receber?select=valor,vencimento,status&vencimento=gte.' + mesInicio + '&vencimento=lte.' + mesFim),
@@ -52,7 +52,7 @@ async function _renderBarChart() {
 
   const queries = meses.map(function(m) {
     var ini = m.y + '-' + String(m.m).padStart(2,'0') + '-01';
-    var fim = m.y + '-' + String(m.m).padStart(2,'0') + '-31';
+    var fim = m.y + '-' + String(m.m).padStart(2,'0') + '-' + _ultimoDiaMes(m.y, m.m);
     return Promise.all([
       sf('/rest/v1/financeiro_receber?select=valor&status=eq.pago&vencimento=gte.' + ini + '&vencimento=lte.' + fim),
       sf('/rest/v1/financeiro_pagar?select=valor&status=eq.pago&vencimento=gte.' + ini + '&vencimento=lte.' + fim)
@@ -95,7 +95,7 @@ async function carregarReceber() {
   var qs = '/rest/v1/financeiro_receber?select=*,clientes(nome,empresa),contratos(numero,descricao)&order=vencimento.asc';
   var status = document.getElementById('fil-rec-status').value;
   var mes = document.getElementById('fil-rec-mes').value;
-  if (mes) { qs += '&vencimento=gte.' + mes + '-01&vencimento=lte.' + mes + '-31'; }
+  if (mes) { var _p = mes.split('-'); qs += '&vencimento=gte.' + mes + '-01&vencimento=lte.' + mes + '-' + _ultimoDiaMes(+_p[0], +_p[1]); }
 
   const { data, ok } = await sf(qs);
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar.</div>'; return; }
@@ -146,7 +146,7 @@ async function carregarPagar() {
   var status = document.getElementById('fil-pag-status').value;
   var mes = document.getElementById('fil-pag-mes').value;
   if (cat) qs += '&categoria=eq.' + cat;
-  if (mes) qs += '&vencimento=gte.' + mes + '-01&vencimento=lte.' + mes + '-31';
+  if (mes) { var _p = mes.split('-'); qs += '&vencimento=gte.' + mes + '-01&vencimento=lte.' + mes + '-' + _ultimoDiaMes(+_p[0], +_p[1]); }
 
   const { data, ok } = await sf(qs);
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar.</div>'; return; }
@@ -295,7 +295,7 @@ async function carregarFluxo() {
 
   const queries = periodos.map(function(p) {
     var ini = p.y + '-' + String(p.m).padStart(2,'0') + '-01';
-    var fim = p.y + '-' + String(p.m).padStart(2,'0') + '-31';
+    var fim = p.y + '-' + String(p.m).padStart(2,'0') + '-' + _ultimoDiaMes(p.y, p.m);
     return Promise.all([
       sf('/rest/v1/financeiro_receber?select=valor&status=neq.cancelado&vencimento=gte.' + ini + '&vencimento=lte.' + fim),
       sf('/rest/v1/financeiro_pagar?select=valor&status=neq.cancelado&vencimento=gte.' + ini + '&vencimento=lte.' + fim)
@@ -333,6 +333,11 @@ async function carregarFluxo() {
 
 function _fStatusLabel(s) {
   return { pendente:'Pendente', pago:'Pago', atrasado:'Atrasado', cancelado:'Cancelado' }[s] || s;
+}
+
+// new Date(y, m, 0).getDate() — m é 1-indexed; day 0 do mês seguinte = último dia do mês atual
+function _ultimoDiaMes(y, m) {
+  return new Date(y, m, 0).getDate();
 }
 
 document.addEventListener('DOMContentLoaded', function() {

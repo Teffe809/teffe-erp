@@ -268,6 +268,70 @@ async function salvarEntrada() {
 
 let _alertasPecas = [];
 
+function _atualizarBadgeAlertas() {
+  var badge = document.getElementById('nav-alertas-badge');
+  if (!badge) return;
+  if (_alertasPecas.length > 0) {
+    badge.textContent = _alertasPecas.length;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function _montarHtmlAlerta() {
+  var linhas = _alertasPecas.map(function (p) {
+    var est = p.estoque_atual != null ? p.estoque_atual : 0;
+    var min = p.estoque_minimo || 0;
+    var forn = p.fornecedores ? p.fornecedores.nome : '—';
+    return '<tr>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid #EEF1F7">' + _esc(p.descricao) + (p.codigo ? ' (' + _esc(p.codigo) + ')' : '') + '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid #EEF1F7;text-align:center;color:#DC2626;font-weight:700">' + est + '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid #EEF1F7;text-align:center">' + min + '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid #EEF1F7">' + _esc(forn) + '</td>' +
+      '</tr>';
+  }).join('');
+  return '<div style="font-family:Arial,sans-serif;color:#222;max-width:640px">' +
+    '<p style="font-size:16px;font-weight:700;color:#DC2626;margin-bottom:8px">⚠️ Alerta de Estoque Baixo — Teffe ERP</p>' +
+    '<p style="font-size:13.5px;color:#555;margin-bottom:18px">As seguintes peças estão com estoque igual ou abaixo do mínimo:</p>' +
+    '<table style="border-collapse:collapse;width:100%;border:1px solid #EEF1F7;border-radius:8px;overflow:hidden">' +
+    '<thead><tr style="background:#F0F4FA">' +
+    '<th style="padding:10px 12px;text-align:left;font-size:11.5px;color:#1A3F80">Peça</th>' +
+    '<th style="padding:10px 12px;text-align:center;font-size:11.5px;color:#1A3F80">Estoque Atual</th>' +
+    '<th style="padding:10px 12px;text-align:center;font-size:11.5px;color:#1A3F80">Mínimo</th>' +
+    '<th style="padding:10px 12px;text-align:left;font-size:11.5px;color:#1A3F80">Fornecedor</th>' +
+    '</tr></thead><tbody>' + linhas + '</tbody></table>' +
+    '<p style="font-size:12px;color:#9CA3AF;margin-top:18px">Enviado automaticamente pelo ERP Teffe — ' + new Date().toLocaleString('pt-BR') + '</p>' +
+    '</div>';
+}
+
+async function verificarAlertasAutomatico() {
+  var { data, ok } = await sf('/rest/v1/pecas?select=id,descricao,codigo,estoque_atual,estoque_minimo,fornecedores(nome)&ativo=eq.true&order=descricao.asc');
+  if (!ok || !data) return;
+
+  _alertasPecas = data.filter(function (p) {
+    return (p.estoque_atual != null ? p.estoque_atual : 0) <= (p.estoque_minimo || 0);
+  });
+
+  _atualizarBadgeAlertas();
+
+  if (_alertasPecas.length === 0) return;
+
+  var hoje = new Date().toISOString().slice(0, 10);
+  if (localStorage.getItem('erp_alerta_data') === hoje) return;
+
+  try {
+    await erpEnviarEmail(
+      'contato@teffe.com.br',
+      'Alerta de Estoque Baixo — ' + _alertasPecas.length + ' peça(s)',
+      _montarHtmlAlerta()
+    );
+    localStorage.setItem('erp_alerta_data', hoje);
+  } catch (e) {
+    console.error('[Alertas] Falha ao enviar e-mail automático:', e);
+  }
+}
+
 async function carregarAlertas() {
   const content = document.getElementById('alertas-content');
   content.innerHTML = '<div class="tbl-loading">Carregando...</div>';
@@ -280,6 +344,8 @@ async function carregarAlertas() {
     const min = p.estoque_minimo || 0;
     return est <= min;
   });
+
+  _atualizarBadgeAlertas();
 
   const btn = document.getElementById('btn-alertas-email');
   btn.disabled = _alertasPecas.length === 0;
@@ -315,32 +381,12 @@ async function enviarAlertaEmail() {
   btn.disabled = true;
 
   try {
-    const linhas = _alertasPecas.map(function (p) {
-      const est = p.estoque_atual != null ? p.estoque_atual : 0;
-      const min = p.estoque_minimo || 0;
-      const forn = p.fornecedores ? p.fornecedores.nome : '—';
-      return '<tr>' +
-        '<td style="padding:8px 12px;border-bottom:1px solid #EEF1F7">' + _esc(p.descricao) + (p.codigo ? ' (' + _esc(p.codigo) + ')' : '') + '</td>' +
-        '<td style="padding:8px 12px;border-bottom:1px solid #EEF1F7;text-align:center;color:#DC2626;font-weight:700">' + est + '</td>' +
-        '<td style="padding:8px 12px;border-bottom:1px solid #EEF1F7;text-align:center">' + min + '</td>' +
-        '<td style="padding:8px 12px;border-bottom:1px solid #EEF1F7">' + _esc(forn) + '</td>' +
-        '</tr>';
-    }).join('');
-
-    const html = '<div style="font-family:Arial,sans-serif;color:#222;max-width:640px">' +
-      '<p style="font-size:16px;font-weight:700;color:#DC2626;margin-bottom:8px">⚠️ Alerta de Estoque Baixo — Teffe ERP</p>' +
-      '<p style="font-size:13.5px;color:#555;margin-bottom:18px">As seguintes peças estão com estoque igual ou abaixo do mínimo:</p>' +
-      '<table style="border-collapse:collapse;width:100%;border:1px solid #EEF1F7;border-radius:8px;overflow:hidden">' +
-      '<thead><tr style="background:#F0F4FA">' +
-      '<th style="padding:10px 12px;text-align:left;font-size:11.5px;color:#1A3F80">Peça</th>' +
-      '<th style="padding:10px 12px;text-align:center;font-size:11.5px;color:#1A3F80">Estoque Atual</th>' +
-      '<th style="padding:10px 12px;text-align:center;font-size:11.5px;color:#1A3F80">Mínimo</th>' +
-      '<th style="padding:10px 12px;text-align:left;font-size:11.5px;color:#1A3F80">Fornecedor</th>' +
-      '</tr></thead><tbody>' + linhas + '</tbody></table>' +
-      '<p style="font-size:12px;color:#9CA3AF;margin-top:18px">Enviado automaticamente pelo ERP Teffe — ' + new Date().toLocaleString('pt-BR') + '</p>' +
-      '</div>';
-
-    await erpEnviarEmail('contato@teffe.com.br', 'Alerta de Estoque Baixo — ' + _alertasPecas.length + ' peça(s)', html);
+    await erpEnviarEmail(
+      'contato@teffe.com.br',
+      'Alerta de Estoque Baixo — ' + _alertasPecas.length + ' peça(s)',
+      _montarHtmlAlerta()
+    );
+    localStorage.setItem('erp_alerta_data', new Date().toISOString().slice(0, 10));
     alert('E-mail de alerta enviado com sucesso!');
   } catch (e) {
     alert('Erro ao enviar e-mail: ' + e.message);

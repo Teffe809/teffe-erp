@@ -91,6 +91,7 @@ function _mostrarApp() {
   document.getElementById('erp-app').style.display = 'flex';
   document.getElementById('erp-user-nome').textContent = _erpNome;
   erpShowView('pecas');
+  verificarAlertasAutomatico();
 }
 
 function erpShowView(view) {

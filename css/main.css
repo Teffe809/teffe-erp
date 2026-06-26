@@ -202,6 +202,14 @@ body{font-family:var(--font);background:var(--bg);color:#1a1a2e;font-size:14px;}
 .modal-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
 .modal-section-hdr span{font-size:13px;font-weight:700;color:var(--azul);}
 
+/* ── USUÁRIOS DO CLIENTE ── */
+.usuario-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:#FAFAFA;}
+.usuario-item strong{font-size:13px;color:#111827;}
+.usuario-item small{font-size:12px;}
+.view-filters input[type=text]{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;background:#fff;}
+.view-filters input[type=text]:focus{border-color:var(--azul);}
+.view-filters input[type=date]{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font);outline:none;background:#fff;}
+
 /* ── RESPONSIVO ── */
 @media(max-width:768px){
   .erp-sidebar{width:60px;}

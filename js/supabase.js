@@ -163,6 +163,9 @@ function erpShowView(view) {
   else if (view === 'pagar') carregarPagar();
   else if (view === 'fluxo') carregarFluxo();
   else if (view === 'prospectos') carregarProspectos();
+  else if (view === 'clientes') carregarClientes();
+  else if (view === 'boletos') carregarBoletos();
+  else if (view === 'logs') carregarLogs();
 }
 
 function fecharModal(id) {
@@ -173,6 +176,28 @@ function _erpErro(msg) {
   const el = document.getElementById('login-erro');
   el.textContent = msg;
   el.style.display = 'block';
+}
+
+async function registrarLog(acao, detalhes) {
+  try {
+    await sf('/rest/v1/logs_sistema', {
+      method: 'POST',
+      body: JSON.stringify({ usuario_email: _erpNome, acao, detalhes: detalhes || null }),
+      headers: { 'Prefer': 'return=minimal' }
+    });
+  } catch(e) {}
+}
+
+async function _uploadArquivo(bucket, caminho, file) {
+  try {
+    const r = await fetch(SURL + '/storage/v1/object/' + bucket + '/' + caminho, {
+      method: 'POST',
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + _erpTok, 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+    if (!r.ok) { console.error('[upload] falhou:', r.status, await r.text()); return null; }
+    return SURL + '/storage/v1/object/public/' + bucket + '/' + caminho;
+  } catch(e) { console.error('[upload] erro:', e); return null; }
 }
 
 document.addEventListener('DOMContentLoaded', function () {

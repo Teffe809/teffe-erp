@@ -18,6 +18,11 @@ async function carregarContratos() {
     const diasFim = Math.ceil((fim - hoje) / 86400000);
     const cliente = c.clientes ? (c.clientes.nome || c.clientes.empresa || '—') : '—';
     const statusBadge = '<span class="badge badge-' + c.status + '">' + _cStatusLabel(c.status) + '</span>';
+    const servicos = Array.isArray(c.servicos_contratados) ? c.servicos_contratados : [];
+    const servicosBadges = servicos.map(function(s) {
+      const cores = { Impressao: '#0A4B8D', Notebook: '#7C3AED', Desktop: '#065F46', 'TEFFE IA': '#F87A13' };
+      return '<span class="badge" style="background:' + (cores[s] || '#6B7280') + ';color:#fff;margin-right:3px">' + _esc(s) + '</span>';
+    }).join('');
     const valor = 'R$ ' + Number(c.valor_mensal).toFixed(2).replace('.', ',');
     const dtInicio = new Date(c.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR');
     const dtFim = fim.toLocaleDateString('pt-BR');
@@ -36,6 +41,7 @@ async function carregarContratos() {
       '<td>' + (c.duracao_meses || '—') + ' meses</td>' +
       '<td><strong>' + valor + '</strong></td>' +
       '<td>' + statusBadge + '</td>' +
+      '<td>' + (servicosBadges || '<span style="color:#9CA3AF">—</span>') + '</td>' +
       '<td>' + diasLabel + '</td>' +
       '<td>' +
         '<button class="btn-icon" title="Editar" onclick=\'abrirModalContrato(' + JSON.stringify(c) + ')\'><i class="ti ti-pencil"></i></button>' +
@@ -46,7 +52,7 @@ async function carregarContratos() {
   }).join('');
 
   wrap.innerHTML = '<table class="erp-table">' +
-    '<thead><tr><th>Cliente</th><th>Número</th><th>Descrição</th><th>Início</th><th>Fim</th><th>Duração</th><th>Valor/mês</th><th>Status</th><th>Vencimento</th><th></th></tr></thead>' +
+    '<thead><tr><th>Cliente</th><th>Número</th><th>Descrição</th><th>Início</th><th>Fim</th><th>Duração</th><th>Valor/mês</th><th>Status</th><th>Serviços</th><th>Vencimento</th><th></th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>';
 }
 
@@ -65,6 +71,17 @@ async function abrirModalContrato(c) {
   document.getElementById('mc-valor').value = c ? (c.valor_mensal || '') : '';
   document.getElementById('mc-indice').value = c ? (c.indice_reajuste || 'IGP-M') : 'IGP-M';
   document.getElementById('mc-obs').value = c ? (c.observacao || '') : '';
+  document.getElementById('mc-arquivo').value = '';
+  var srvAtivos = c && Array.isArray(c.servicos_contratados) ? c.servicos_contratados : [];
+  ['mc-srv-impressao','mc-srv-notebook','mc-srv-desktop','mc-srv-teffe-ia'].forEach(function(elId) {
+    var el = document.getElementById(elId);
+    if (el) el.checked = false;
+  });
+  srvAtivos.forEach(function(s) {
+    var elId = 'mc-srv-' + s.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
+    var el = document.getElementById(elId);
+    if (el) el.checked = true;
+  });
   document.getElementById('modal-contrato').classList.add('open');
 }
 
@@ -101,6 +118,19 @@ async function salvarContrato() {
     document.getElementById('mc-numero').value = numero;
   }
 
+  const servicosSelecionados = ['Impressao', 'Notebook', 'Desktop', 'TEFFE IA'].filter(function(s) {
+    return document.getElementById('mc-srv-' + s.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '')) &&
+           document.getElementById('mc-srv-' + s.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '')).checked;
+  });
+
+  const fileInput = document.getElementById('mc-arquivo');
+  let arquivoUrl = null;
+  if (fileInput && fileInput.files[0]) {
+    const file = fileInput.files[0];
+    const path = (numero || 'contrato') + '_' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    arquivoUrl = await _uploadArquivo('contratos-pdf', path, file);
+  }
+
   const payload = {
     cliente_id: clienteId,
     numero,
@@ -112,8 +142,10 @@ async function salvarContrato() {
     dia_vencimento: diaVenc,
     status: document.getElementById('mc-status').value,
     indice_reajuste: document.getElementById('mc-indice').value,
-    observacao: document.getElementById('mc-obs').value.trim() || null
+    observacao: document.getElementById('mc-obs').value.trim() || null,
+    servicos_contratados: servicosSelecionados
   };
+  if (arquivoUrl) payload.arquivo_url = arquivoUrl;
 
   let res;
   if (id) {
@@ -140,6 +172,7 @@ async function salvarContrato() {
     }
   }
 
+  registrarLog(id ? 'contrato_editado' : 'contrato_criado', { numero, cliente_id: clienteId });
   fecharModal('modal-contrato');
   carregarContratos();
 }

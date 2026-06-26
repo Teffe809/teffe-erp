@@ -270,22 +270,7 @@ function abrirModalPagamento(id, tabela) {
   document.getElementById('modal-pagamento').classList.add('open');
 }
 
-async function confirmarPagamento() {
-  const id = document.getElementById('mpag-id').value;
-  const tabela = document.getElementById('mpag-tabela').value;
-  const data = document.getElementById('mpag-data').value;
-  if (!data) { alert('Informe a data de pagamento.'); return; }
-
-  const endpoint = tabela === 'receber' ? 'financeiro_receber' : 'financeiro_pagar';
-  const res = await sf('/rest/v1/' + endpoint + '?id=eq.' + id, {
-    method: 'PATCH',
-    body: JSON.stringify({ status: 'pago', data_pagamento: data })
-  });
-  if (!res.ok) { alert('Erro ao atualizar: ' + JSON.stringify(res.data)); return; }
-  fecharModal('modal-pagamento');
-  if (tabela === 'receber') carregarReceber();
-  else carregarPagar();
-}
+// confirmarPagamento unificado em index.html (suporta receber, pagar e boleto)
 
 /* ═══════════════════════════════════════════════════════
    FLUXO DE CAIXA

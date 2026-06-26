@@ -80,6 +80,9 @@
       <button class="nav-item" id="nav-pagar" onclick="erpShowView('pagar')">
         <i class="ti ti-arrow-up-circle"></i> <span class="nav-label">Pagar</span>
       </button>
+      <button class="nav-item" id="nav-boletos" onclick="erpShowView('boletos')">
+        <i class="ti ti-receipt"></i> <span class="nav-label">Boletos</span>
+      </button>
       <button class="nav-item" id="nav-fluxo" onclick="erpShowView('fluxo')">
         <i class="ti ti-trending-up"></i> <span class="nav-label">Fluxo de Caixa</span>
       </button>
@@ -87,6 +90,16 @@
       <div class="sidebar-section">CRM</div>
       <button class="nav-item" id="nav-prospectos" onclick="erpShowView('prospectos')">
         <i class="ti ti-users"></i> <span class="nav-label">Prospectos</span>
+      </button>
+
+      <div class="sidebar-section">Clientes</div>
+      <button class="nav-item" id="nav-clientes" onclick="erpShowView('clientes')">
+        <i class="ti ti-building"></i> <span class="nav-label">Clientes</span>
+      </button>
+
+      <div class="sidebar-section">Admin</div>
+      <button class="nav-item" id="nav-logs" onclick="erpShowView('logs')">
+        <i class="ti ti-list-details"></i> <span class="nav-label">Logs</span>
       </button>
     </aside>
 
@@ -222,6 +235,45 @@
           <button class="btn-primary" onclick="abrirModalProspecto()"><i class="ti ti-plus"></i> Novo Prospecto</button>
         </div>
         <div id="kanban-wrap" class="kanban-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- BOLETOS -->
+      <div class="erp-view" id="view-boletos">
+        <div class="view-header">
+          <h1><i class="ti ti-receipt"></i> Boletos</h1>
+          <button class="btn-primary" onclick="abrirModalBoleto()"><i class="ti ti-plus"></i> Novo Boleto</button>
+        </div>
+        <div class="view-filters">
+          <select id="fil-bol-status" onchange="carregarBoletos()">
+            <option value="">Todos os status</option>
+            <option value="a_vencer">A Vencer</option>
+            <option value="vencido">Vencido</option>
+            <option value="pago">Pago</option>
+          </select>
+          <input type="month" id="fil-bol-mes" onchange="carregarBoletos()"/>
+        </div>
+        <div id="boletos-wrap" class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- CLIENTES -->
+      <div class="erp-view" id="view-clientes">
+        <div class="view-header">
+          <h1><i class="ti ti-building"></i> Clientes</h1>
+          <button class="btn-primary" onclick="abrirModalCliente()"><i class="ti ti-plus"></i> Novo Cliente</button>
+        </div>
+        <div class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- LOGS -->
+      <div class="erp-view" id="view-logs">
+        <div class="view-header">
+          <h1><i class="ti ti-list-details"></i> Logs do Sistema</h1>
+        </div>
+        <div class="view-filters">
+          <input type="date" id="fil-log-data" onchange="carregarLogs()" placeholder="Filtrar por data"/>
+          <input type="text" id="fil-log-user" oninput="carregarLogs()" placeholder="Filtrar por usuário" style="width:220px"/>
+        </div>
+        <div id="logs-wrap" class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
       </div>
 
     </main>
@@ -372,6 +424,16 @@
         </div>
       </div>
       <div class="fg"><label>Descrição</label><input id="mc-descricao" type="text" placeholder="Ex: Manutenção mensal de impressoras"/></div>
+      <div class="fg">
+        <label>Serviços Contratados</label>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px">
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="checkbox" id="mc-srv-impressao"/> Impressão</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="checkbox" id="mc-srv-notebook"/> Notebook</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="checkbox" id="mc-srv-desktop"/> Desktop</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="checkbox" id="mc-srv-teffe-ia"/> TEFFE IA</label>
+        </div>
+      </div>
+      <div class="fg"><label>Contrato PDF assinado</label><input id="mc-arquivo" type="file" accept=".pdf" style="padding:4px"/></div>
       <div class="fg"><label>Observação</label><textarea id="mc-obs" placeholder="Observações..."></textarea></div>
     </div>
     <div class="modal-footer">
@@ -396,7 +458,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-pagamento')">Cancelar</button>
-      <button class="btn-primary" onclick="confirmarPagamento()">Confirmar</button>
+      <button class="btn-primary" onclick="confirmarPagamentoUnificado()">Confirmar</button>
     </div>
   </div>
 </div>
@@ -556,10 +618,144 @@
   </div>
 </div>
 
+<!-- ══════════════════════ MODAL CLIENTE ══════════════════════ -->
+<div class="modal-overlay" id="modal-cliente" onclick="if(event.target===this)fecharModal('modal-cliente')">
+  <div class="modal-box" style="width:680px;">
+    <div class="modal-header">
+      <h2 id="mcli-titulo">Novo Cliente</h2>
+      <button class="modal-close" onclick="fecharModal('modal-cliente')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mcli-id"/>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Razão Social *</label><input id="mcli-razao" type="text" placeholder="Razão Social"/></div>
+        <div class="fg"><label>Nome Fantasia</label><input id="mcli-fantasia" type="text" placeholder="Fantasia"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>CNPJ</label><input id="mcli-cnpj" type="text" placeholder="00.000.000/0001-00"/></div>
+        <div class="fg"><label>Inscrição Estadual</label><input id="mcli-ie" type="text" placeholder="IE"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Inscrição Municipal</label><input id="mcli-im" type="text" placeholder="IM"/></div>
+        <div class="fg">
+          <label>CEP</label>
+          <div style="display:flex;gap:6px">
+            <input id="mcli-cep" type="text" placeholder="00000-000" style="flex:1"/>
+            <button class="btn-secondary" type="button" onclick="buscarCEP()" style="white-space:nowrap">Buscar CEP</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Endereço</label><input id="mcli-endereco" type="text" placeholder="Rua/Av."/></div>
+        <div class="fg"><label>Número</label><input id="mcli-numero" type="text" placeholder="Nº"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Complemento</label><input id="mcli-complemento" type="text" placeholder="Sala, Apto..."/></div>
+        <div class="fg"><label>Bairro</label><input id="mcli-bairro" type="text" placeholder="Bairro"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Cidade</label><input id="mcli-cidade" type="text" placeholder="Cidade"/></div>
+        <div class="fg"><label>Estado</label><input id="mcli-estado" type="text" placeholder="UF" maxlength="2"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Telefone</label><input id="mcli-telefone" type="text" placeholder="(11) 99999-9999"/></div>
+        <div class="fg"><label>E-mail</label><input id="mcli-email" type="email" placeholder="contato@empresa.com"/></div>
+      </div>
+      <div class="fg"><label>Site</label><input id="mcli-site" type="text" placeholder="https://empresa.com.br"/></div>
+      <div class="fg-check">
+        <input type="checkbox" id="mcli-ativo" checked/>
+        <label for="mcli-ativo">Cliente ativo</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-cliente')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarCliente()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL BOLETO ══════════════════════ -->
+<div class="modal-overlay" id="modal-boleto" onclick="if(event.target===this)fecharModal('modal-boleto')">
+  <div class="modal-box" style="width:580px;">
+    <div class="modal-header">
+      <h2 id="mbol-titulo">Novo Boleto</h2>
+      <button class="modal-close" onclick="fecharModal('modal-boleto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mbol-id"/>
+      <div class="fg"><label>Cliente *</label><select id="mbol-cliente" onchange="_carregarContratosSelectBoleto(this.value,null)"><option value="">Selecione o cliente...</option></select></div>
+      <div class="fg"><label>Contrato</label><select id="mbol-contrato"><option value="">Nenhum</option></select></div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Nº NF</label><input id="mbol-nf" type="text" placeholder="NF-00001"/></div>
+        <div class="fg"><label>Nº Boleto</label><input id="mbol-numero" type="text" placeholder="000.00000.00000"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Valor (R$) *</label><input id="mbol-valor" type="number" step="0.01" min="0" placeholder="0,00"/></div>
+        <div class="fg"><label>Vencimento *</label><input id="mbol-venc" type="date"/></div>
+      </div>
+      <div class="fg"><label>PDF do Boleto</label><input id="mbol-arquivo" type="file" accept=".pdf" style="padding:4px"/></div>
+      <div class="fg"><label>Observação</label><textarea id="mbol-obs" placeholder="Observações..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-boleto')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarBoleto()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL USUÁRIOS DO CLIENTE ══════════════════════ -->
+<div class="modal-overlay" id="modal-usuarios-cliente" onclick="if(event.target===this)fecharModal('modal-usuarios-cliente')">
+  <div class="modal-box" style="width:560px;">
+    <div class="modal-header">
+      <h2 id="muc-titulo">Usuários de Acesso</h2>
+      <button class="modal-close" onclick="fecharModal('modal-usuarios-cliente')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="muc-lista" style="margin-bottom:20px;min-height:60px"><div class="tbl-loading">Carregando...</div></div>
+      <div style="border-top:1px solid #E5E7EB;padding-top:16px">
+        <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px">Adicionar novo usuário</p>
+        <div class="modal-grid-2">
+          <div class="fg"><label>Nome *</label><input id="muc-nome" type="text" placeholder="Nome completo"/></div>
+          <div class="fg"><label>E-mail *</label><input id="muc-email" type="email" placeholder="usuario@empresa.com"/></div>
+        </div>
+        <button class="btn-primary" onclick="adicionarUsuarioCliente()"><i class="ti ti-send"></i> Enviar Convite</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-usuarios-cliente')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/supabase.js"></script>
 <script src="js/estoque.js"></script>
 <script src="js/contratos.js"></script>
 <script src="js/financeiro.js"></script>
 <script src="js/crm.js"></script>
+<script src="js/clientes.js"></script>
+<script src="js/boletos.js"></script>
+<script>
+// Unifica confirmarPagamento para receber/pagar/boleto
+async function confirmarPagamentoUnificado() {
+  const id = document.getElementById('mpag-id').value;
+  const tabela = document.getElementById('mpag-tabela').value;
+  const data = document.getElementById('mpag-data').value;
+  if (!data) { alert('Informe a data de pagamento.'); return; }
+  if (tabela === 'boleto') {
+    await confirmarPagamentoBoleto(id, data);
+    fecharModal('modal-pagamento');
+  } else {
+    const endpoint = tabela === 'receber' ? 'financeiro_receber' : 'financeiro_pagar';
+    const res = await sf('/rest/v1/' + endpoint + '?id=eq.' + id, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'pago', data_pagamento: data })
+    });
+    if (!res.ok) { alert('Erro ao atualizar: ' + JSON.stringify(res.data)); return; }
+    fecharModal('modal-pagamento');
+    if (tabela === 'receber') carregarReceber();
+    else carregarPagar();
+  }
+}
+</script>
 </body>
 </html>

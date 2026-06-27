@@ -96,6 +96,9 @@
       <button class="nav-item" id="nav-clientes" onclick="erpShowView('clientes')">
         <i class="ti ti-building"></i> <span class="nav-label">Clientes</span>
       </button>
+      <button class="nav-item" id="nav-equipamentos" onclick="erpShowView('equipamentos')">
+        <i class="ti ti-printer"></i> <span class="nav-label">Equipamentos</span>
+      </button>
 
       <div class="sidebar-section">Admin</div>
       <button class="nav-item" id="nav-logs" onclick="erpShowView('logs')">
@@ -264,6 +267,18 @@
         <div class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
       </div>
 
+      <!-- EQUIPAMENTOS -->
+      <div class="erp-view" id="view-equipamentos">
+        <div class="view-header">
+          <h1><i class="ti ti-printer"></i> Equipamentos</h1>
+          <button class="btn-primary" onclick="abrirModalEquipamento()"><i class="ti ti-plus"></i> Novo Equipamento</button>
+        </div>
+        <div class="view-filters">
+          <input type="text" id="fil-equip-busca" oninput="carregarEquipamentos()" placeholder="Buscar por serial, código, modelo ou empresa..." style="width:340px"/>
+        </div>
+        <div class="table-wrap" id="equip-table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
       <!-- LOGS -->
       <div class="erp-view" id="view-logs">
         <div class="view-header">
@@ -339,6 +354,56 @@
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-fornecedor')">Cancelar</button>
       <button class="btn-primary" onclick="salvarFornecedor()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL EQUIPAMENTO ══════════════════════ -->
+<div class="modal-overlay" id="modal-equipamento" onclick="if(event.target===this)fecharModal('modal-equipamento')">
+  <div class="modal-box" style="width:560px;">
+    <div class="modal-header">
+      <h2 id="meq-titulo">Novo Equipamento</h2>
+      <button class="modal-close" onclick="fecharModal('modal-equipamento')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="meq-id"/>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Serial *</label><input id="meq-serial" type="text" placeholder="Nº de série do fabricante"/></div>
+        <div class="fg"><label>Código Teffe</label><input id="meq-codigo" type="text" placeholder="Ex: AWI3"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Marca *</label><input id="meq-marca" type="text" placeholder="HP, Canon, Epson..."/></div>
+        <div class="fg"><label>Modelo *</label><input id="meq-modelo" type="text" placeholder="LaserJet Pro M428fdn"/></div>
+      </div>
+      <div class="fg"><label>Cliente</label>
+        <select id="meq-cliente"><option value="">Selecione o cliente...</option></select>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Tipo de Impressão</label>
+          <div style="display:flex;gap:20px;margin-top:8px;align-items:center;">
+            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="meq-tipo-impressao" id="meq-tipo-mono" value="monocromatico" checked/>
+              Monocromático
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;">
+              <input type="radio" name="meq-tipo-impressao" id="meq-tipo-color" value="colorido"/>
+              Colorido
+            </label>
+          </div>
+        </div>
+        <div class="fg"><label>Status</label>
+          <select id="meq-status">
+            <option value="ativo">Ativo</option>
+            <option value="em_manutencao">Em manutenção</option>
+            <option value="inativo">Inativo</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label>Observações</label><textarea id="meq-obs" placeholder="Informações adicionais..." rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-equipamento')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarEquipamento()">Salvar</button>
     </div>
   </div>
 </div>
@@ -733,6 +798,7 @@
 <script src="js/financeiro.js"></script>
 <script src="js/crm.js"></script>
 <script src="js/clientes.js"></script>
+<script src="js/equipamentos.js"></script>
 <script src="js/boletos.js"></script>
 <script>
 // Unifica confirmarPagamento para receber/pagar/boleto

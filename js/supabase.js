@@ -164,6 +164,7 @@ function erpShowView(view) {
   else if (view === 'fluxo') carregarFluxo();
   else if (view === 'prospectos') carregarProspectos();
   else if (view === 'clientes') carregarClientes();
+  else if (view === 'equipamentos') carregarEquipamentos();
   else if (view === 'boletos') carregarBoletos();
   else if (view === 'logs') carregarLogs();
 }

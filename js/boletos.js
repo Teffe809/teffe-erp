@@ -139,6 +139,8 @@ async function salvarBoleto() {
   };
   if (arquivoUrl) payload.arquivo_url = arquivoUrl;
 
+  console.log('[salvarBoleto] clienteId:', clienteId, '| payload:', JSON.stringify(payload));
+
   let res;
   if (id) {
     res = await sf('/rest/v1/boletos?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(payload) });
@@ -147,6 +149,7 @@ async function salvarBoleto() {
   }
   if (!res.ok) { alert('Erro ao salvar boleto: ' + JSON.stringify(res.data)); return; }
   registrarLog(id ? 'boleto_editado' : 'boleto_criado', { cliente_id: clienteId, valor });
+  alert('Boleto salvo com sucesso!');
   fecharModal('modal-boleto');
   carregarBoletos();
 }

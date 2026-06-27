@@ -193,7 +193,7 @@ async function _uploadArquivo(bucket, caminho, file) {
   try {
     const r = await fetch(SURL + '/storage/v1/object/' + bucket + '/' + caminho, {
       method: 'POST',
-      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + _erpTok, 'Content-Type': file.type || 'application/octet-stream' },
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + _erpTok, 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' },
       body: file
     });
     if (!r.ok) { console.error('[upload] falhou:', r.status, await r.text()); return null; }

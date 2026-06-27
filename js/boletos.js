@@ -10,12 +10,20 @@ async function carregarBoletos() {
   await _atualizarBoletosVencidos(hoje);
 
   var qs = '/rest/v1/boletos?select=*&order=vencimento.asc';
-  var status = document.getElementById('fil-bol-status') ? document.getElementById('fil-bol-status').value : '';
+  var status = (document.getElementById('fil-bol-status') || {}).value || '';
+  var mes = (document.getElementById('fil-bol-mes') || {}).value || '';
+  if (mes) {
+    var _p = mes.split('-');
+    var ano = +_p[0], mesNum = +_p[1];
+    var primeiroDia = mes + '-01';
+    var ultimoDia = mes + '-' + String(new Date(ano, mesNum, 0).getDate()).padStart(2, '0');
+    qs += '&vencimento=gte.' + primeiroDia + '&vencimento=lte.' + ultimoDia;
+  }
   if (status) qs += '&status=eq.' + status;
 
   const { data, ok } = await sf(qs);
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar boletos.</div>'; return; }
-  if (!data.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum boleto encontrado.</div>'; return; }
+  if (!data.length) { wrap.innerHTML = '<div class="tbl-empty">' + (mes ? 'Nenhum boleto encontrado para este período.' : 'Nenhum boleto encontrado.') + '</div>'; return; }
 
   // Busca nomes dos clientes em chamada separada
   var clienteIds = [...new Set(data.filter(function(b){ return b.cliente_id; }).map(function(b){ return b.cliente_id; }))];

@@ -9,7 +9,7 @@ async function carregarBoletos() {
 
   await _atualizarBoletosVencidos(hoje);
 
-  var qs = '/rest/v1/boletos?select=*,clientes(razao_social,fantasia)&order=vencimento.asc';
+  var qs = '/rest/v1/boletos?select=id,cliente_id,numero_nf,numero_boleto,valor,vencimento,status,arquivo_url,observacao&order=vencimento.asc';
   var status = document.getElementById('fil-bol-status') ? document.getElementById('fil-bol-status').value : '';
   var mes = document.getElementById('fil-bol-mes') ? document.getElementById('fil-bol-mes').value : '';
   if (status) qs += '&status=eq.' + status;
@@ -22,11 +22,21 @@ async function carregarBoletos() {
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar boletos.</div>'; return; }
   if (!data.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum boleto encontrado.</div>'; return; }
 
+  // Busca nomes dos clientes em chamada separada
+  var clienteIds = [...new Set(data.filter(function(b){ return b.cliente_id; }).map(function(b){ return b.cliente_id; }))];
+  var clienteMap = {};
+  if (clienteIds.length) {
+    var cRes = await sf('/rest/v1/clientes?id=in.(' + clienteIds.join(',') + ')&select=id,razao_social,fantasia');
+    if (cRes.ok && cRes.data) {
+      cRes.data.forEach(function(c){ clienteMap[c.id] = c.fantasia || c.razao_social || '—'; });
+    }
+  }
+
   const statusMap = { a_vencer: 'A Vencer', vencido: 'Vencido', pago: 'Pago' };
   const statusCls = { a_vencer: 'badge-pendente', vencido: 'badge-atrasado', pago: 'badge-pago' };
 
   const rows = data.map(function(b) {
-    const cli = b.clientes ? (b.clientes.fantasia || b.clientes.razao_social || '—') : '—';
+    const cli = clienteMap[b.cliente_id] || '—';
     const venc = b.vencimento ? new Date(b.vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
     const val = 'R$ ' + Number(b.valor).toFixed(2).replace('.', ',');
     const tooltip = b.status === 'vencido' ? ' title="Pode levar até 5 dias úteis para compensação"' : '';

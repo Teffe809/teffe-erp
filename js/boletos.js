@@ -9,14 +9,9 @@ async function carregarBoletos() {
 
   await _atualizarBoletosVencidos(hoje);
 
-  var qs = '/rest/v1/boletos?select=id,cliente_id,numero_nf,numero_boleto,valor,vencimento,status,arquivo_url,observacao&order=vencimento.asc';
+  var qs = '/rest/v1/boletos?select=*&order=vencimento.asc';
   var status = document.getElementById('fil-bol-status') ? document.getElementById('fil-bol-status').value : '';
-  var mes = document.getElementById('fil-bol-mes') ? document.getElementById('fil-bol-mes').value : '';
   if (status) qs += '&status=eq.' + status;
-  if (mes) {
-    var _p = mes.split('-');
-    qs += '&vencimento=gte.' + mes + '-01&vencimento=lte.' + mes + '-' + _ultimoDiaMes(+_p[0], +_p[1]);
-  }
 
   const { data, ok } = await sf(qs);
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar boletos.</div>'; return; }

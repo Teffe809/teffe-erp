@@ -121,9 +121,9 @@ body{font-family:var(--font);background:var(--bg);color:#1a1a2e;font-size:14px;}
 .badge-encerrado{background:#F3F4F6;color:#6B7280;}
 .badge-cancelado{background:#FEE2E2;color:#991B1B;}
 .badge-renovacao{background:#EEF2FF;color:#3730A3;}
-.badge-pago{background:#DCFCE7;color:#16A34A;}
-.badge-pendente{background:#EEF3FB;color:#0A4B8D;}
-.badge-atrasado{background:#FEE2E2;color:#DC2626;}
+.badge-pago{background:#16A34A;color:#fff;}
+.badge-pendente{background:#0A4B8D;color:#fff;}
+.badge-atrasado{background:#DC2626;color:#fff;}
 .row-vencendo td{background:#EEF3FB !important;}
 .row-atrasado td{background:#FEF2F2 !important;}
 

@@ -153,31 +153,65 @@ async function adicionarUsuarioCliente() {
   const email = document.getElementById('muc-email').value.trim();
   if (!nome || !email) { alert('Informe nome e e-mail.'); return; }
 
-  const res = await sf('/rest/v1/cliente_usuarios', {
+  // 1. Criar conta no Auth com senha temporária aleatória (anon key suficiente para signup)
+  const senhaTemp = crypto.randomUUID();
+  const signupRes = await fetch(SURL + '/auth/v1/signup', {
     method: 'POST',
-    body: JSON.stringify({ cliente_id: _clienteAtualId, nome, email, ativo: true }),
+    headers: { 'apikey': SKEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password: senhaTemp, data: { nome } })
+  });
+  const signupData = await signupRes.json().catch(function() { return {}; });
+
+  // Aceita sucesso (201/200) ou "already registered" — usuário já existe, tudo bem
+  const jaExistia = !signupRes.ok && (
+    (signupData.error_description || '').toLowerCase().includes('already') ||
+    (signupData.msg || '').toLowerCase().includes('already') ||
+    signupRes.status === 422
+  );
+  if (!signupRes.ok && !jaExistia) {
+    const msg = signupData.error_description || signupData.msg || signupData.message || JSON.stringify(signupData);
+    alert('Erro ao criar conta do usuário: ' + msg);
+    return;
+  }
+
+  // 2. Salvar em cliente_usuarios (insert ignora conflito de e-mail duplicado)
+  const userId = signupData.user ? signupData.user.id : (signupData.id || null);
+  const insertPayload = { cliente_id: _clienteAtualId, nome, email, ativo: true };
+  if (userId) insertPayload.user_id = userId;
+
+  const dbRes = await sf('/rest/v1/cliente_usuarios', {
+    method: 'POST',
+    body: JSON.stringify(insertPayload),
     headers: { 'Prefer': 'return=minimal' }
   });
-  if (!res.ok) { alert('Erro ao cadastrar usuário: ' + JSON.stringify(res.data)); return; }
+  if (!dbRes.ok) {
+    const dbMsg = dbRes.data && dbRes.data.message ? dbRes.data.message : JSON.stringify(dbRes.data);
+    // Código 23505 = unique_violation (usuário já cadastrado para este cliente)
+    if (!(dbMsg || '').includes('23505') && !(dbMsg || '').toLowerCase().includes('unique')) {
+      alert('Erro ao cadastrar usuário: ' + dbMsg);
+      return;
+    }
+  }
 
-  await _enviarInviteUsuario(email, nome);
+  // 3. Disparar e-mail de redefinição de senha (anon key aceita — o cliente cria a própria senha)
+  await _enviarRecoverUsuario(email);
 
   document.getElementById('muc-nome').value = '';
   document.getElementById('muc-email').value = '';
   registrarLog('usuario_cliente_criado', { email, cliente_id: _clienteAtualId });
   await carregarUsuariosCliente(_clienteAtualId);
-  alert('Usuário cadastrado! Um link de acesso foi enviado para ' + email);
+  alert('Usuário cadastrado! Um e-mail de definição de senha foi enviado para ' + email + '.');
 }
 
-async function _enviarInviteUsuario(email, nome) {
+async function _enviarRecoverUsuario(email) {
   try {
-    const r = await fetch(SURL + '/auth/v1/invite', {
+    const r = await fetch(SURL + '/auth/v1/recover', {
       method: 'POST',
-      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + _erpTok, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, data: { nome } })
+      headers: { 'apikey': SKEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
     });
-    if (!r.ok) console.warn('[invite] status:', r.status, await r.text());
-  } catch(e) { console.warn('[invite] erro:', e); }
+    if (!r.ok) console.warn('[recover] status:', r.status, await r.text());
+  } catch(e) { console.warn('[recover] erro:', e); }
 }
 
 async function resetarSenhaUsuario(email) {

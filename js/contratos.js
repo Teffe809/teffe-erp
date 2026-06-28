@@ -8,32 +8,50 @@
 async function carregarContratos() {
   const wrap = document.querySelector('#view-contratos .table-wrap');
   wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
-  const { data, ok } = await sf('/rest/v1/contratos?select=*,clientes(nome,empresa)&order=data_fim.asc');
+
+  const { data, ok, status: httpStatus } = await sf('/rest/v1/contratos?select=*&order=created_at.desc');
+  console.log('[carregarContratos] ok:', ok, '| status:', httpStatus, '| rows:', data && data.length);
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar contratos.</div>'; return; }
   if (!data.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum contrato cadastrado.</div>'; return; }
 
+  // Carrega nomes dos clientes em uma única query
+  var clienteMap = {};
+  try {
+    var clienteIds = [...new Set(data.map(function(c){ return c.cliente_id; }).filter(Boolean))];
+    if (clienteIds.length) {
+      var cr = await sf('/rest/v1/clientes?id=in.(' + clienteIds.join(',') + ')&select=id,razao_social,codigo');
+      (cr.data || []).forEach(function(cli) { clienteMap[cli.id] = cli; });
+    }
+  } catch(e) { console.warn('[carregarContratos] erro ao carregar clientes:', e); }
+
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
   const rows = data.map(function(c) {
-    const fim = new Date(c.data_fim + 'T12:00:00');
-    const diasFim = Math.ceil((fim - hoje) / 86400000);
-    const cliente = c.clientes ? (c.clientes.nome || c.clientes.empresa || '—') : '—';
+    const cli = clienteMap[c.cliente_id];
+    const clienteNome = cli ? (cli.razao_social || '—') : '—';
+    const clienteCodigo = cli && cli.codigo ? cli.codigo : null;
+    const fim = c.data_fim ? new Date(c.data_fim + 'T12:00:00') : null;
+    const diasFim = fim ? Math.ceil((fim - hoje) / 86400000) : null;
     const statusBadge = '<span class="badge badge-' + c.status + '">' + _cStatusLabel(c.status) + '</span>';
     const servicos = Array.isArray(c.servicos_contratados) ? c.servicos_contratados : [];
     const servicosBadges = servicos.map(function(s) {
       const cores = { Impressao: '#0A4B8D', Notebook: '#7C3AED', Desktop: '#065F46', 'TEFFE IA': '#F87A13' };
       return '<span class="badge" style="background:' + (cores[s] || '#6B7280') + ';color:#fff;margin-right:3px">' + _esc(s) + '</span>';
     }).join('');
-    const valor = 'R$ ' + Number(c.valor_mensal).toFixed(2).replace('.', ',');
-    const dtInicio = new Date(c.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR');
-    const dtFim = fim.toLocaleDateString('pt-BR');
-    const diasLabel = diasFim < 0
-      ? '<span style="color:#DC2626;font-weight:700">Vencido</span>'
-      : diasFim <= 60
-        ? '<span style="color:#D97706;font-weight:700">' + diasFim + ' dias</span>'
-        : '<span style="color:#9CA3AF">' + diasFim + ' dias</span>';
-    const rowCls = diasFim <= 60 && c.status === 'ativo' ? ' class="row-vencendo"' : '';
+    const valor = c.valor_mensal ? 'R$ ' + Number(c.valor_mensal).toFixed(2).replace('.', ',') : '—';
+    const dtInicio = c.data_inicio ? new Date(c.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    const dtFim = fim ? fim.toLocaleDateString('pt-BR') : '—';
+    const diasLabel = diasFim === null ? '<span style="color:#9CA3AF">—</span>'
+      : diasFim < 0
+        ? '<span style="color:#DC2626;font-weight:700">Vencido</span>'
+        : diasFim <= 60
+          ? '<span style="color:#D97706;font-weight:700">' + diasFim + ' dias</span>'
+          : '<span style="color:#9CA3AF">' + diasFim + ' dias</span>';
+    const rowCls = diasFim !== null && diasFim <= 60 && c.status === 'ativo' ? ' class="row-vencendo"' : '';
+    const clienteLabel = clienteCodigo
+      ? '<span style="font-family:monospace;background:#E5E7EB;padding:1px 5px;border-radius:4px;font-size:11px;margin-right:5px">' + _esc(clienteCodigo) + '</span>' + _esc(clienteNome)
+      : _esc(clienteNome);
     return '<tr' + rowCls + '>' +
-      '<td><strong>' + _esc(cliente) + '</strong></td>' +
+      '<td><strong>' + clienteLabel + '</strong></td>' +
       '<td>' + _esc(c.numero || '—') + '</td>' +
       '<td>' + _esc(c.descricao || '—') + '</td>' +
       '<td>' + dtInicio + '</td>' +
@@ -292,6 +310,8 @@ async function salvarContrato() {
   };
   if (arquivoUrl) payload.arquivo_url = arquivoUrl;
 
+  console.log('[salvarContrato] payload:', payload);
+
   let res;
   if (id) {
     res = await sf('/rest/v1/contratos?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(payload) });
@@ -302,6 +322,7 @@ async function salvarContrato() {
       headers: { 'Prefer': 'return=minimal' }
     });
   }
+  console.log('[salvarContrato] resposta ok:', res.ok, '| data:', res.data);
   if (!res.ok) { alert('Erro ao salvar contrato: ' + JSON.stringify(res.data)); return; }
 
   var contratoIdFinal = id || null;

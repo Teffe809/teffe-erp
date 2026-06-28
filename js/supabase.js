@@ -154,6 +154,7 @@ function erpShowView(view) {
   document.getElementById('view-' + view).classList.add('active');
   document.getElementById('nav-' + view).classList.add('active');
   if (view === 'pecas') carregarPecas();
+  else if (view === 'insumos') carregarInsumos();
   else if (view === 'fornecedores') carregarFornecedores();
   else if (view === 'entradas') carregarEntradas();
   else if (view === 'alertas') carregarAlertas();

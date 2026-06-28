@@ -54,6 +54,9 @@
       <button class="nav-item active" id="nav-pecas" onclick="erpShowView('pecas')">
         <i class="ti ti-puzzle"></i> <span>Peças</span>
       </button>
+      <button class="nav-item" id="nav-insumos" onclick="erpShowView('insumos')">
+        <i class="ti ti-droplet"></i> <span>Insumos</span>
+      </button>
       <button class="nav-item" id="nav-fornecedores" onclick="erpShowView('fornecedores')">
         <i class="ti ti-truck"></i> <span>Fornecedores</span>
       </button>
@@ -116,6 +119,26 @@
           <button class="btn-primary" onclick="abrirModalPeca()"><i class="ti ti-plus"></i> Nova Peça</button>
         </div>
         <div class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- INSUMOS -->
+      <div class="erp-view" id="view-insumos">
+        <div class="view-header">
+          <h1><i class="ti ti-droplet"></i> Insumos</h1>
+          <button class="btn-primary" onclick="abrirModalInsumo()"><i class="ti ti-plus"></i> Novo Insumo</button>
+        </div>
+        <div class="view-filters" style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <select id="fil-ins-tipo" onchange="carregarInsumos()" style="width:160px">
+            <option value="">Todos os tipos</option>
+            <option value="toner">Toner</option>
+            <option value="cartucho">Cartucho</option>
+            <option value="cilindro">Cilindro</option>
+            <option value="fita">Fita</option>
+            <option value="outro">Outro</option>
+          </select>
+          <input type="text" id="fil-ins-modelo" placeholder="Filtrar por modelo..." oninput="carregarInsumos()" style="width:260px"/>
+        </div>
+        <div id="ins-table-wrap"><div class="tbl-loading">Carregando...</div></div>
       </div>
 
       <!-- FORNECEDORES -->
@@ -411,6 +434,15 @@
         <div class="fg"><label>Último Contador</label><input id="meq-ultimo-contador" type="number" min="0" value="0"/></div>
       </div>
       <div class="fg"><label>Observações</label><textarea id="meq-obs" placeholder="Informações adicionais..." rows="2"></textarea></div>
+      <!-- Insumos Compatíveis -->
+      <div style="border-top:1px solid #E5E7EB;margin-top:16px;padding-top:14px">
+        <label style="font-weight:600;font-size:14px;display:block;margin-bottom:8px"><i class="ti ti-droplet"></i> Insumos Compatíveis</label>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input id="meq-insumo-busca" type="text" placeholder="Buscar insumo por nome ou código..." style="flex:1" oninput="meqBuscarInsumo()"/>
+        </div>
+        <div id="meq-insumo-resultado" style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:6px;max-height:160px;overflow-y:auto;display:none;margin-bottom:6px"></div>
+        <div id="meq-insumo-lista"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-equipamento')">Cancelar</button>
@@ -829,8 +861,53 @@
   </div>
 </div>
 
+<!-- ══════════════════════ MODAL INSUMO ══════════════════════ -->
+<div class="modal-overlay" id="modal-insumo" onclick="if(event.target===this)fecharModal('modal-insumo')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="mins-titulo">Novo Insumo</h2>
+      <button class="modal-close" onclick="fecharModal('modal-insumo')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mins-id"/>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Nome *</label><input id="mins-nome" type="text" placeholder="Ex: Toner HP CE285A"/></div>
+        <div class="fg"><label>Código</label><input id="mins-codigo" type="text" placeholder="Ex: CE285A"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Tipo</label>
+          <select id="mins-tipo">
+            <option value="toner">Toner</option>
+            <option value="cartucho">Cartucho</option>
+            <option value="cilindro">Cilindro</option>
+            <option value="fita">Fita</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="fg"><label>Fornecedor</label>
+          <select id="mins-fornecedor"><option value="">Carregando...</option></select>
+        </div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Modelo do Equipamento</label><input id="mins-modelo" type="text" placeholder="Ex: HP LaserJet Pro M428"/></div>
+        <div class="fg"><label>Marca do Equipamento</label><input id="mins-marca" type="text" placeholder="Ex: HP"/></div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Qtd. em Estoque</label><input id="mins-qtd-estoque" type="number" min="0" value="0"/></div>
+        <div class="fg"><label>Qtd. Mínima</label><input id="mins-qtd-minima" type="number" min="0" value="1"/></div>
+      </div>
+      <div class="fg"><label>Observações</label><textarea id="mins-obs" rows="2" placeholder="Notas adicionais..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-insumo')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarInsumo()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/supabase.js"></script>
 <script src="js/estoque.js"></script>
+<script src="js/insumos.js"></script>
 <script src="js/contratos.js"></script>
 <script src="js/financeiro.js"></script>
 <script src="js/crm.js"></script>

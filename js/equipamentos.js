@@ -69,7 +69,17 @@ async function carregarEquipamentos() {
     '<tbody>' + rows + '</tbody></table>';
 }
 
+/* ── Insumos Compatíveis (estado local do modal) ── */
+var _meqInsumos = []; // [{id?:'link-uuid', insumo_id, nome, codigo, cor}]
+
 async function abrirModalEquipamento(e) {
+  // Reset insumos state
+  _meqInsumos = [];
+  document.getElementById('meq-insumo-busca').value = '';
+  document.getElementById('meq-insumo-resultado').style.display = 'none';
+  document.getElementById('meq-insumo-resultado').innerHTML = '';
+  document.getElementById('meq-insumo-lista').innerHTML = '';
+
   document.getElementById('meq-id').value = e ? e.id : '';
   document.getElementById('meq-titulo').textContent = e ? 'Editar Equipamento' : 'Novo Equipamento';
   document.getElementById('meq-codigo-teffe').value = e ? (e.codigo_teffe || '') : '';
@@ -101,6 +111,25 @@ async function abrirModalEquipamento(e) {
     console.warn('[Equipamentos] falha ao carregar fornecedores:', err);
     sel.innerHTML = '<option value="">— Erro ao carregar —</option>';
   }
+
+  // Carregar insumos já vinculados ao equipamento
+  if (e && e.id) {
+    try {
+      var linkRes = await sf('/rest/v1/equipamento_insumos?equipamento_id=eq.' + e.id + '&select=*');
+      var links = Array.isArray(linkRes.data) ? linkRes.data : [];
+      if (links.length) {
+        var insumoIds = links.map(function(l) { return l.insumo_id; }).filter(Boolean);
+        var insumoRes = await sf('/rest/v1/insumos?id=in.(' + insumoIds.join(',') + ')&select=id,nome,codigo');
+        var insumoMap = {};
+        (Array.isArray(insumoRes.data) ? insumoRes.data : []).forEach(function(i) { insumoMap[i.id] = i; });
+        _meqInsumos = links.map(function(l) {
+          var info = insumoMap[l.insumo_id] || {};
+          return { _link_id: l.id, insumo_id: l.insumo_id, nome: info.nome || '?', codigo: info.codigo || '', cor: l.cor || '' };
+        });
+      }
+    } catch(err) { console.warn('[Equipamentos] falha ao carregar insumos vinculados:', err); }
+  }
+  _meqRenderInsumosList();
 
   document.getElementById('modal-equipamento').classList.add('open');
 }
@@ -157,12 +186,122 @@ async function salvarEquipamento() {
     return;
   }
 
+  var equipamentoId = id || (Array.isArray(resData) && resData[0] ? resData[0].id : null);
+
   if (!id && Array.isArray(resData) && resData[0] && resData[0].codigo_teffe) {
     alert('Equipamento cadastrado!\nCódigo Teffe: ' + resData[0].codigo_teffe);
   }
 
+  if (equipamentoId) await _meqSincronizarInsumos(equipamentoId);
+
   fecharModal('modal-equipamento');
   carregarEquipamentos();
+}
+
+async function _meqSincronizarInsumos(equipamentoId) {
+  // Carregar vínculos existentes no banco
+  var existRes = await sf('/rest/v1/equipamento_insumos?equipamento_id=eq.' + equipamentoId + '&select=id,insumo_id');
+  var existentes = Array.isArray(existRes.data) ? existRes.data : [];
+  var existIds = existentes.map(function(l) { return l.insumo_id; });
+  var localIds  = _meqInsumos.map(function(i) { return i.insumo_id; });
+
+  // Remover os que foram desvinculados
+  var paraRemover = existentes.filter(function(l) { return localIds.indexOf(l.insumo_id) === -1; });
+  for (var r = 0; r < paraRemover.length; r++) {
+    await sf('/rest/v1/equipamento_insumos?id=eq.' + paraRemover[r].id, { method: 'DELETE' });
+  }
+
+  // Inserir os novos
+  var paraAdicionar = _meqInsumos.filter(function(i) { return existIds.indexOf(i.insumo_id) === -1; });
+  for (var a = 0; a < paraAdicionar.length; a++) {
+    var item = paraAdicionar[a];
+    await sf('/rest/v1/equipamento_insumos', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ equipamento_id: equipamentoId, insumo_id: item.insumo_id, cor: item.cor || null })
+    });
+  }
+
+  // Atualizar cor de vínculos que já existiam
+  var paraAtualizar = _meqInsumos.filter(function(i) {
+    var exist = existentes.find(function(l) { return l.insumo_id === i.insumo_id; });
+    return exist && (i.cor || '') !== (i._cor_original || '');
+  });
+  for (var u = 0; u < paraAtualizar.length; u++) {
+    var upd = paraAtualizar[u];
+    var link = existentes.find(function(l) { return l.insumo_id === upd.insumo_id; });
+    if (link) {
+      await sf('/rest/v1/equipamento_insumos?id=eq.' + link.id, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ cor: upd.cor || null })
+      });
+    }
+  }
+}
+
+async function meqBuscarInsumo() {
+  var q = (document.getElementById('meq-insumo-busca').value || '').trim();
+  var resDiv = document.getElementById('meq-insumo-resultado');
+  if (q.length < 2) { resDiv.style.display = 'none'; resDiv.innerHTML = ''; return; }
+
+  resDiv.innerHTML = '<div style="padding:6px 10px;color:#6B7280;font-size:13px">Buscando...</div>';
+  resDiv.style.display = 'block';
+
+  var { data } = await sf('/rest/v1/insumos?select=id,nome,codigo,tipo&or=(nome.ilike.*' + encodeURIComponent(q) + '*,codigo.ilike.*' + encodeURIComponent(q) + '*)&order=nome.asc&limit=10');
+  if (!data || !data.length) {
+    resDiv.innerHTML = '<div style="padding:6px 10px;color:#6B7280;font-size:13px">Nenhum insumo encontrado.</div>';
+    return;
+  }
+
+  var tipoLabel = { toner: 'Toner', cartucho: 'Cartucho', cilindro: 'Cilindro', fita: 'Fita', outro: 'Outro' };
+  resDiv.innerHTML = data.map(function(i) {
+    var jaAdicionado = _meqInsumos.some(function(x) { return x.insumo_id === i.id; });
+    var label = _esc(i.nome) + (i.codigo ? ' <small style="color:#9CA3AF">' + _esc(i.codigo) + '</small>' : '') +
+      ' <small style="color:#6366F1">' + (tipoLabel[i.tipo] || i.tipo) + '</small>';
+    if (jaAdicionado) {
+      return '<div style="padding:7px 10px;font-size:13px;color:#9CA3AF;display:flex;justify-content:space-between">' +
+        label + '<span style="font-style:italic">já vinculado</span></div>';
+    }
+    return '<div class="mc-busca-item" onclick=\'meqAdicionarInsumo(' + JSON.stringify(i) + ')\' style="cursor:pointer;padding:7px 10px;font-size:13px;display:flex;justify-content:space-between;align-items:center">' +
+      '<span>' + label + '</span>' +
+      '<button class="btn-secondary" style="padding:2px 8px;font-size:12px" onclick=\'event.stopPropagation();meqAdicionarInsumo(' + JSON.stringify(i) + ')\'>Vincular</button>' +
+      '</div>';
+  }).join('');
+}
+
+function meqAdicionarInsumo(i) {
+  if (_meqInsumos.some(function(x) { return x.insumo_id === i.id; })) return;
+  _meqInsumos.push({ insumo_id: i.id, nome: i.nome, codigo: i.codigo || '', cor: '' });
+  document.getElementById('meq-insumo-busca').value = '';
+  document.getElementById('meq-insumo-resultado').style.display = 'none';
+  document.getElementById('meq-insumo-resultado').innerHTML = '';
+  _meqRenderInsumosList();
+}
+
+function meqRemoverInsumo(insumoId) {
+  _meqInsumos = _meqInsumos.filter(function(x) { return x.insumo_id !== insumoId; });
+  _meqRenderInsumosList();
+}
+
+function meqAtualizarCor(insumoId, cor) {
+  var item = _meqInsumos.find(function(x) { return x.insumo_id === insumoId; });
+  if (item) item.cor = cor;
+}
+
+function _meqRenderInsumosList() {
+  var lista = document.getElementById('meq-insumo-lista');
+  if (!_meqInsumos.length) {
+    lista.innerHTML = '<div style="font-size:12px;color:#9CA3AF;padding:4px 0">Nenhum insumo vinculado.</div>';
+    return;
+  }
+  lista.innerHTML = _meqInsumos.map(function(i) {
+    return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #F3F4F6">' +
+      '<span style="flex:1;font-size:13px"><strong>' + _esc(i.nome) + '</strong>' + (i.codigo ? ' <small style="color:#9CA3AF">(' + _esc(i.codigo) + ')</small>' : '') + '</span>' +
+      '<input type="text" placeholder="Cor (ex: preto)" value="' + _esc(i.cor) + '" style="width:100px;font-size:12px;padding:3px 6px" oninput="meqAtualizarCor(\'' + i.insumo_id + '\',this.value)"/>' +
+      '<button class="btn-icon" title="Remover" onclick="meqRemoverInsumo(\'' + i.insumo_id + '\')" style="color:#DC2626"><i class="ti ti-x"></i></button>' +
+      '</div>';
+  }).join('');
 }
 
 async function excluirEquipamento(id) {

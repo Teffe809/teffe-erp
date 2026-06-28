@@ -5,9 +5,16 @@
 async function carregarPecas() {
   const wrap = document.querySelector('#view-pecas .table-wrap');
   wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
-  const { data, ok } = await sf('/rest/v1/pecas?select=*,fornecedores(nome)&order=descricao.asc');
+  const { data, ok } = await sf('/rest/v1/pecas?select=*&order=descricao.asc');
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar peças.</div>'; return; }
   if (!data.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhuma peça cadastrada.</div>'; return; }
+
+  var fornMap = {};
+  var fornIds = [...new Set(data.map(function(p) { return p.fornecedor_id; }).filter(Boolean))];
+  if (fornIds.length) {
+    var fornRes = await sf('/rest/v1/fornecedores?id=in.(' + fornIds.join(',') + ')&select=id,nome');
+    (Array.isArray(fornRes.data) ? fornRes.data : []).forEach(function(f) { fornMap[f.id] = f; });
+  }
 
   const rows = data.map(function (p) {
     const estoque = p.estoque_atual != null ? p.estoque_atual : 0;
@@ -24,7 +31,7 @@ async function carregarPecas() {
       ? (((p.preco_venda - p.custo) / p.custo) * 100).toFixed(0) + '%'
       : '—';
     const margemCls = p.preco_venda > p.custo ? 'margem-pos' : (p.preco_venda < p.custo ? 'margem-neg' : '');
-    const forn = p.fornecedores ? p.fornecedores.nome : '—';
+    const forn = p.fornecedor_id && fornMap[p.fornecedor_id] ? fornMap[p.fornecedor_id].nome : '—';
 
     return '<tr>' +
       '<td><strong>' + _esc(p.descricao) + '</strong>' + (p.codigo ? '<br><small style="color:#9CA3AF">' + _esc(p.codigo) + '</small>' : '') + '</td>' +

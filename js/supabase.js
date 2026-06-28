@@ -155,6 +155,8 @@ function erpShowView(view) {
   document.getElementById('nav-' + view).classList.add('active');
   if (view === 'pecas') carregarPecas();
   else if (view === 'insumos') carregarInsumos();
+  else if (view === 'tecnicos') erpTecCarregar();
+  else if (view === 'chamados-admin') { erpTecAtualizarFiltro(); erpChamCarregar(); }
   else if (view === 'fornecedores') carregarFornecedores();
   else if (view === 'entradas') carregarEntradas();
   else if (view === 'alertas') carregarAlertas();

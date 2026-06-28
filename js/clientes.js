@@ -11,10 +11,24 @@ async function carregarClientes() {
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar clientes.</div>'; return; }
   if (!data.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum cliente cadastrado.</div>'; return; }
 
+  // Técnicos para o dropdown — usa estado compartilhado ou carrega fresh
+  var tecs = (typeof _erpTecs !== 'undefined' && _erpTecs.length) ? _erpTecs : [];
+  if (!tecs.length) {
+    try {
+      const tr = await sf('/rest/v1/tecnicos?select=id,nome&order=nome.asc');
+      tecs = Array.isArray(tr.data) ? tr.data : [];
+    } catch(e) {}
+  }
+  const tecOpts = tecs.map(function(t) {
+    return '<option value="' + t.id + '">' + _esc(t.nome) + '</option>';
+  }).join('');
+
   const rows = data.map(function(c) {
     const badge = c.ativo
       ? '<span class="badge badge-ativo">Ativo</span>'
       : '<span class="badge badge-encerrado">Inativo</span>';
+    const tecSel = '<select class="adm-sel-inline" onchange="cliAtribuirTecnico(\'' + c.id + '\',this)">' +
+      '<option value="">Sem técnico</option>' + tecOpts + '</select>';
     return '<tr>' +
       '<td><strong style="font-family:monospace">' + _esc(c.codigo || '—') + '</strong></td>' +
       '<td><strong>' + _esc(c.razao_social) + '</strong></td>' +
@@ -22,6 +36,12 @@ async function carregarClientes() {
       '<td>' + _esc(c.cnpj || '—') + '</td>' +
       '<td>' + _esc(c.telefone || '—') + '</td>' +
       '<td>' + badge + '</td>' +
+      '<td onclick="event.stopPropagation()">' +
+        '<div style="display:flex;align-items:center;gap:4px">' +
+          tecSel +
+          '<span id="msg-tec-' + c.id + '" style="display:none;color:#16A34A;font-size:12px;font-weight:600">✓</span>' +
+        '</div>' +
+      '</td>' +
       '<td>' +
         '<button class="btn-icon" title="Usuários de Acesso" onclick="abrirModalUsuariosCliente(\'' + c.id + '\',\'' + _esc(c.razao_social).replace(/'/g,"&#39;") + '\')"><i class="ti ti-users" style="color:#3730A3"></i></button>' +
         '<button class="btn-icon" title="Editar" onclick=\'abrirModalCliente(' + JSON.stringify(c) + ')\'><i class="ti ti-pencil"></i></button>' +
@@ -31,8 +51,27 @@ async function carregarClientes() {
   }).join('');
 
   wrap.innerHTML = '<table class="erp-table">' +
-    '<thead><tr><th>Código</th><th>Razão Social</th><th>Fantasia</th><th>CNPJ</th><th>Telefone</th><th>Status</th><th></th></tr></thead>' +
+    '<thead><tr><th>Código</th><th>Razão Social</th><th>Fantasia</th><th>CNPJ</th><th>Telefone</th><th>Status</th><th>Técnico Responsável</th><th></th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>';
+
+  // Aplica seleção atual de cada cliente no dropdown
+  data.forEach(function(c) {
+    if (!c.tecnico_responsavel_id) return;
+    var sel = document.querySelector('select[onchange*="' + c.id + '"]');
+    if (sel) sel.value = c.tecnico_responsavel_id;
+  });
+}
+
+async function cliAtribuirTecnico(clienteId, selEl) {
+  const tecnicoId = selEl.value;
+  const { ok } = await sf('/rest/v1/clientes?id=eq.' + clienteId, {
+    method: 'PATCH',
+    headers: { 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ tecnico_responsavel_id: tecnicoId || null })
+  });
+  if (!ok) { alert('Erro ao atribuir técnico.'); return; }
+  const msg = document.getElementById('msg-tec-' + clienteId);
+  if (msg) { msg.style.display = 'inline'; setTimeout(function() { msg.style.display = 'none'; }, 2000); }
 }
 
 async function abrirModalCliente(c) {

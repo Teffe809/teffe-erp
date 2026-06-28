@@ -51,6 +51,9 @@
     <!-- SIDEBAR -->
     <aside class="erp-sidebar">
       <div class="sidebar-section">Estoque</div>
+      <button class="nav-item" id="nav-equipamentos" onclick="erpShowView('equipamentos')">
+        <i class="ti ti-printer"></i> <span class="nav-label">Equipamentos</span>
+      </button>
       <button class="nav-item active" id="nav-pecas" onclick="erpShowView('pecas')">
         <i class="ti ti-puzzle"></i> <span>Peças</span>
       </button>
@@ -99,11 +102,14 @@
       <button class="nav-item" id="nav-clientes" onclick="erpShowView('clientes')">
         <i class="ti ti-building"></i> <span class="nav-label">Clientes</span>
       </button>
-      <button class="nav-item" id="nav-equipamentos" onclick="erpShowView('equipamentos')">
-        <i class="ti ti-printer"></i> <span class="nav-label">Equipamentos</span>
-      </button>
 
       <div class="sidebar-section">Admin</div>
+      <button class="nav-item" id="nav-tecnicos" onclick="erpShowView('tecnicos')">
+        <i class="ti ti-user-check"></i> <span class="nav-label">Técnicos</span>
+      </button>
+      <button class="nav-item" id="nav-chamados-admin" onclick="erpShowView('chamados-admin')">
+        <i class="ti ti-headset"></i> <span class="nav-label">Chamados</span>
+      </button>
       <button class="nav-item" id="nav-logs" onclick="erpShowView('logs')">
         <i class="ti ti-list-details"></i> <span class="nav-label">Logs</span>
       </button>
@@ -300,6 +306,66 @@
           <input type="text" id="fil-equip-busca" oninput="carregarEquipamentos()" placeholder="Buscar por serial, código, modelo ou empresa..." style="width:340px"/>
         </div>
         <div class="table-wrap" id="equip-table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- TÉCNICOS -->
+      <div class="erp-view" id="view-tecnicos">
+        <div class="view-header">
+          <h1><i class="ti ti-user-check"></i> Técnicos</h1>
+        </div>
+        <!-- Formulário de criação -->
+        <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:16px;margin-bottom:20px">
+          <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:12px">Novo Técnico</p>
+          <div class="modal-grid-2" style="margin-bottom:10px">
+            <div class="fg"><label>Nome *</label><input id="tec-nome" type="text" placeholder="Nome completo"/></div>
+            <div class="fg"><label>E-mail *</label><input id="tec-email" type="email" placeholder="email@empresa.com"/></div>
+          </div>
+          <div class="modal-grid-2" style="margin-bottom:10px">
+            <div class="fg"><label>Telefone</label><input id="tec-tel" type="text" placeholder="(XX) XXXXX-XXXX"/></div>
+            <div class="fg"><label>Matrícula</label><input id="tec-mat" type="text" placeholder="Ex: T001"/></div>
+          </div>
+          <div class="modal-grid-2" style="margin-bottom:10px">
+            <div class="fg"><label>Senha Temporária *</label><input id="tec-senha" type="password" placeholder="Mínimo 6 caracteres"/></div>
+            <div class="fg" style="display:flex;align-items:flex-end">
+              <button class="btn-primary" id="tec-btn-criar" onclick="erpTecCriar()" style="width:100%"><i class="ti ti-plus"></i> Criar Técnico</button>
+            </div>
+          </div>
+          <div id="tec-form-erro" style="display:none;color:#DC2626;font-size:13px;margin-top:6px"></div>
+        </div>
+        <div id="tec-table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- CHAMADOS ADMIN -->
+      <div class="erp-view" id="view-chamados-admin">
+        <div class="view-header">
+          <h1><i class="ti ti-headset"></i> Chamados</h1>
+          <button class="btn-primary" onclick="erpChamAbrirNovo()"><i class="ti ti-plus"></i> Novo Chamado</button>
+        </div>
+        <div class="view-filters" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <select id="cham-filtro-status" onchange="erpChamCarregar()" style="width:150px">
+            <option value="todos">Todos os status</option>
+            <option value="aberto">Aberto</option>
+            <option value="andamento">Em andamento</option>
+            <option value="encerrado">Encerrado</option>
+            <option value="concluido">Concluído</option>
+            <option value="resolvido">Resolvido</option>
+          </select>
+          <select id="cham-filtro-tec" onchange="erpChamCarregar()" style="width:170px">
+            <option value="">Todos os técnicos</option>
+            <option value="is_null">Sem técnico</option>
+          </select>
+          <select id="cham-filtro-tipo" onchange="erpChamCarregar()" style="width:150px">
+            <option value="todos">Todos os tipos</option>
+            <option value="assistencia">Assistência</option>
+            <option value="instalacao">Instalação</option>
+            <option value="suprimento">Suprimento</option>
+            <option value="preventiva">Preventiva</option>
+          </select>
+          <input type="date" id="cham-filtro-inicio" onchange="erpChamCarregar()" placeholder="De"/>
+          <input type="date" id="cham-filtro-fim" onchange="erpChamCarregar()" placeholder="Até"/>
+          <button class="btn-secondary" onclick="erpChamCarregar()"><i class="ti ti-refresh"></i> Atualizar</button>
+        </div>
+        <div id="cham-table-wrap"><div class="tbl-loading">Carregando...</div></div>
       </div>
 
       <!-- LOGS -->
@@ -861,6 +927,78 @@
   </div>
 </div>
 
+<!-- ══════════════════════ MODAL CHAMADO DETALHE ══════════════════════ -->
+<div class="modal-overlay" id="modal-cham-detalhe" onclick="if(event.target===this)erpChamFecharDetalhe()">
+  <div class="modal-box" style="width:680px;max-width:96vw">
+    <div class="modal-header">
+      <h2>Detalhes do Chamado</h2>
+      <button class="modal-close" onclick="erpChamFecharDetalhe()">✕</button>
+    </div>
+    <div class="modal-body" id="erp-cham-detalhe-corpo" style="max-height:68vh;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="erp-cham-detalhe-btn-os"><i class="ti ti-printer"></i> Imprimir OS</button>
+      <button class="btn-secondary" onclick="erpChamFecharDetalhe()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL NOVO CHAMADO ══════════════════════ -->
+<div class="modal-overlay" id="modal-cham-novo" onclick="if(event.target===this)erpChamFecharNovo()">
+  <div class="modal-box" style="width:580px;max-width:96vw">
+    <div class="modal-header">
+      <h2>Novo Chamado</h2>
+      <button class="modal-close" onclick="erpChamFecharNovo()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-grid-2">
+        <div class="fg"><label>Cliente *</label>
+          <select id="nc-cliente" onchange="erpChamNcOnClienteChange()">
+            <option value="">Selecione...</option>
+          </select>
+        </div>
+        <div class="fg"><label>Equipamento</label>
+          <select id="nc-equip"><option value="">Selecione o cliente primeiro...</option></select>
+        </div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Tipo</label>
+          <select id="nc-tipo">
+            <option value="assistencia">Assistência Técnica</option>
+            <option value="instalacao">Instalação</option>
+            <option value="suprimento">Suprimento</option>
+            <option value="preventiva">Preventiva</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="fg"><label>Prioridade</label>
+          <select id="nc-prio">
+            <option value="baixa">Baixa</option>
+            <option value="normal" selected>Normal</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Técnico</label>
+          <select id="nc-tec"><option value="">Sem técnico atribuído</option></select>
+        </div>
+        <div class="fg"><label>Data prevista</label>
+          <input id="nc-data" type="date"/>
+        </div>
+      </div>
+      <div class="fg"><label>Descrição *</label>
+        <textarea id="nc-desc" rows="4" placeholder="Descreva o problema ou solicitação..."></textarea>
+      </div>
+      <div id="nc-erro" style="display:none;color:#DC2626;font-size:13px;margin-top:6px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="erpChamFecharNovo()">Cancelar</button>
+      <button class="btn-primary" id="nc-btn-salvar" onclick="erpChamSalvarNovo()"><i class="ti ti-check"></i> Criar Chamado</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════ MODAL INSUMO ══════════════════════ -->
 <div class="modal-overlay" id="modal-insumo" onclick="if(event.target===this)fecharModal('modal-insumo')">
   <div class="modal-box">
@@ -914,6 +1052,8 @@
 <script src="js/clientes.js"></script>
 <script src="js/equipamentos.js"></script>
 <script src="js/boletos.js"></script>
+<script src="js/tecnicos.js"></script>
+<script src="js/chamados-admin.js"></script>
 <script>
 // Unifica confirmarPagamento para receber/pagar/boleto
 async function confirmarPagamentoUnificado() {

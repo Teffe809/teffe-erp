@@ -241,3 +241,9 @@ body{font-family:var(--font);background:var(--bg);color:#1a1a2e;font-size:14px;}
 .badge-aberto{background:#DBEAFE;color:#1E40AF;}
 .badge-andamento{background:#FEF9C3;color:#92400E;}
 .badge-encerrado,.badge-concluido,.badge-resolvido{background:#DCFCE7;color:#15803D;}
+
+/* ── UPPERCASE EM INPUTS (exceto email, url, senha, número, data) ── */
+input:not([type="email"]):not([type="url"]):not([type="password"]):not([type="number"]):not([type="date"]):not([type="month"]):not([type="time"]):not([type="color"]),
+textarea{text-transform:uppercase;}
+input:not([type="email"]):not([type="url"]):not([type="password"]):not([type="number"]):not([type="date"]):not([type="month"]):not([type="time"]):not([type="color"])::placeholder,
+textarea::placeholder{text-transform:uppercase;}

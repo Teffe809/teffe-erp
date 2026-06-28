@@ -67,16 +67,21 @@ async function abrirModalEquipamento(e) {
   document.getElementById('meq-tipo-mono').checked = tipo !== 'colorido';
   document.getElementById('meq-tipo-color').checked = tipo === 'colorido';
 
-  // Carregar clientes no select
+  // Carregar clientes no select (try/catch garante que modal abre mesmo se falhar)
   const sel = document.getElementById('meq-cliente');
-  sel.innerHTML = '<option value="">Carregando...</option>';
-  const { data: clientes } = await sf('/rest/v1/clientes?select=id,empresa,nome&order=empresa.asc');
   const clienteId = e ? (e.cliente_id || '') : '';
-  sel.innerHTML = '<option value="">— Sem cliente vinculado —</option>' +
-    (clientes || []).map(function(c) {
-      const label = c.empresa || c.nome || '—';
-      return '<option value="' + c.id + '"' + (c.id === clienteId ? ' selected' : '') + '>' + _esc(label) + '</option>';
-    }).join('');
+  sel.innerHTML = '<option value="">Carregando...</option>';
+  try {
+    const { data: clientes } = await sf('/rest/v1/clientes?select=id,empresa,nome&order=empresa.asc');
+    sel.innerHTML = '<option value="">— Sem cliente vinculado —</option>' +
+      (Array.isArray(clientes) ? clientes : []).map(function(c) {
+        const label = c.empresa || c.nome || '—';
+        return '<option value="' + c.id + '"' + (c.id === clienteId ? ' selected' : '') + '>' + _esc(label) + '</option>';
+      }).join('');
+  } catch(err) {
+    console.warn('[Equipamentos] falha ao carregar clientes:', err);
+    sel.innerHTML = '<option value="">— Erro ao carregar clientes —</option>';
+  }
 
   document.getElementById('modal-equipamento').classList.add('open');
 }

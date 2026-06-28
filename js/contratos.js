@@ -57,10 +57,9 @@ async function carregarContratos() {
 }
 
 async function abrirModalContrato(c) {
-  try { await _carregarClientesSelect('mc-cliente'); } catch(e) { console.warn('[Contratos] falha ao carregar clientes:', e); }
+  // Preenche campos estáticos primeiro
   document.getElementById('mc-id').value = c ? c.id : '';
   document.getElementById('mc-titulo').textContent = c ? 'Editar Contrato' : 'Novo Contrato';
-  document.getElementById('mc-cliente').value = c ? (c.cliente_id || '') : '';
   document.getElementById('mc-numero').value = c ? (c.numero || '') : '';
   document.getElementById('mc-descricao').value = c ? (c.descricao || '') : '';
   document.getElementById('mc-status').value = c ? (c.status || 'ativo') : 'ativo';
@@ -71,7 +70,7 @@ async function abrirModalContrato(c) {
   document.getElementById('mc-valor').value = c ? (c.valor_mensal || '') : '';
   document.getElementById('mc-indice').value = c ? (c.indice_reajuste || 'IGP-M') : 'IGP-M';
   document.getElementById('mc-obs').value = c ? (c.observacao || '') : '';
-  document.getElementById('mc-arquivo').value = '';
+  try { document.getElementById('mc-arquivo').value = ''; } catch(e) {}
   var srvAtivos = c && Array.isArray(c.servicos_contratados) ? c.servicos_contratados : [];
   ['mc-srv-impressao','mc-srv-notebook','mc-srv-desktop','mc-srv-teffe-ia'].forEach(function(elId) {
     var el = document.getElementById(elId);
@@ -82,6 +81,13 @@ async function abrirModalContrato(c) {
     var el = document.getElementById(elId);
     if (el) el.checked = true;
   });
+  // Carrega clientes no select (garante abertura do modal mesmo se falhar)
+  try {
+    await _carregarClientesSelect('mc-cliente');
+    if (c && c.cliente_id) document.getElementById('mc-cliente').value = c.cliente_id;
+  } catch(e) {
+    console.warn('[Contratos] falha ao carregar clientes:', e);
+  }
   document.getElementById('modal-contrato').classList.add('open');
 }
 
@@ -228,17 +234,17 @@ async function excluirContrato(id) {
 }
 
 async function _carregarClientesSelect(selId) {
-  const { data } = await sf('/rest/v1/clientes?select=id,nome,empresa&order=nome.asc');
   const sel = document.getElementById(selId);
-  const cur = sel.value;
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Carregando...</option>';
+  const { data } = await sf('/rest/v1/clientes?select=id,nome,empresa&order=nome.asc');
   sel.innerHTML = '<option value="">Selecione o cliente...</option>';
   (Array.isArray(data) ? data : []).forEach(function(c) {
     var opt = document.createElement('option');
     opt.value = c.id;
-    opt.textContent = c.nome || c.empresa || c.id;
+    opt.textContent = c.empresa || c.nome || c.id;
     sel.appendChild(opt);
   });
-  if (cur) sel.value = cur;
 }
 
 function _cStatusLabel(s) {

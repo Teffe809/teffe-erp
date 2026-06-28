@@ -8,7 +8,7 @@ async function carregarEquipamentos() {
   wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
 
   const busca = (document.getElementById('fil-equip-busca') || {}).value || '';
-  let q = '/rest/v1/equipamentos?select=*,clientes(empresa,nome)&order=created_at.desc';
+  let q = '/rest/v1/equipamentos?select=*&order=created_at.desc';
   if (busca.trim()) {
     const enc = encodeURIComponent(busca.trim());
     q += '&or=(serial.ilike.*' + enc + '*,codigo.ilike.*' + enc + '*,modelo.ilike.*' + enc + '*,marca.ilike.*' + enc + '*)';
@@ -30,13 +30,12 @@ async function carregarEquipamentos() {
   };
 
   const rows = data.map(function(e) {
-    const cliente = e.clientes ? (e.clientes.empresa || e.clientes.nome || '—') : '—';
     return '<tr>' +
       '<td><strong>' + _esc(e.serial || '—') + '</strong>' +
         (e.codigo ? '<br><small style="color:#9CA3AF">TEFFE-' + _esc(e.codigo) + '</small>' : '') + '</td>' +
       '<td>' + _esc(e.marca || '—') + '</td>' +
       '<td>' + _esc(e.modelo || '—') + '</td>' +
-      '<td>' + _esc(cliente) + '</td>' +
+      '<td>' + _esc(e.localizacao || '—') + '</td>' +
       '<td>' + tipoLabel(e.tipo_impressao) + '</td>' +
       '<td>' + statusLabel(e.status) + '</td>' +
       '<td>' +
@@ -48,7 +47,7 @@ async function carregarEquipamentos() {
 
   wrap.innerHTML = '<table class="erp-table">' +
     '<thead><tr>' +
-      '<th>Serial / Código</th><th>Marca</th><th>Modelo</th><th>Cliente</th><th>Tipo</th><th>Status</th><th></th>' +
+      '<th>Serial / Código</th><th>Marca</th><th>Modelo</th><th>Localização</th><th>Tipo</th><th>Status</th><th></th>' +
     '</tr></thead>' +
     '<tbody>' + rows + '</tbody></table>';
 }
@@ -106,6 +105,8 @@ async function salvarEquipamento() {
     status: document.getElementById('meq-status').value || 'ativo',
     observacoes: document.getElementById('meq-obs').value.trim() || null,
   };
+
+  console.log('[Equipamentos] payload:', payload);
 
   const method = id ? 'PATCH' : 'POST';
   const path = id

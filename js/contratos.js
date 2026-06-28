@@ -41,47 +41,34 @@ async function carregarContratos() {
     const statusBadge = '<span class="badge badge-' + c.status + '">' + _cStatusLabel(c.status) + '</span>';
     const tb = c.tipo_contrato ? (_tipoBadgeCfg[c.tipo_contrato] || { l: c.tipo_contrato, bg: '#E5E7EB', c: '#374151' }) : null;
     const tipoBadge = tb ? '<span class="badge" style="background:' + tb.bg + ';color:' + tb.c + '">' + tb.l + '</span>' : '—';
-    const servicos = Array.isArray(c.servicos_contratados) ? c.servicos_contratados : [];
-    const servicosBadges = servicos.map(function(s) {
-      const cores = { Impressao: '#0A4B8D', Notebook: '#7C3AED', Desktop: '#065F46', 'TEFFE IA': '#F87A13' };
-      return '<span class="badge" style="background:' + (cores[s] || '#6B7280') + ';color:#fff;margin-right:3px">' + _esc(s) + '</span>';
-    }).join('');
     const valor = c.valor_mensal ? 'R$ ' + Number(c.valor_mensal).toFixed(2).replace('.', ',') : '—';
     const dtInicio = c.data_inicio ? new Date(c.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
     const dtFim = fim ? fim.toLocaleDateString('pt-BR') : '—';
-    const diasLabel = diasFim === null ? '<span style="color:#9CA3AF">—</span>'
-      : diasFim < 0
-        ? '<span style="color:#DC2626;font-weight:700">Vencido</span>'
-        : diasFim <= 60
-          ? '<span style="color:#D97706;font-weight:700">' + diasFim + ' dias</span>'
-          : '<span style="color:#9CA3AF">' + diasFim + ' dias</span>';
     const rowCls = diasFim !== null && diasFim <= 60 && c.status === 'ativo' ? ' class="row-vencendo"' : '';
     const clienteLabel = clienteCodigo
       ? '<span style="font-family:monospace;background:#E5E7EB;padding:1px 5px;border-radius:4px;font-size:11px;margin-right:5px">' + _esc(clienteCodigo) + '</span>' + _esc(clienteNome)
       : _esc(clienteNome);
+    var cJson = JSON.stringify(c);
     return '<tr' + rowCls + '>' +
-      '<td><strong>' + clienteLabel + '</strong></td>' +
-      '<td>' + _esc(c.numero || '—') + '</td>' +
+      '<td style="white-space:nowrap"><strong>' + clienteLabel + '</strong></td>' +
+      '<td style="white-space:nowrap;font-family:monospace">' + _esc(c.numero || '—') + '</td>' +
       '<td>' + tipoBadge + '</td>' +
-      '<td>' + _esc(c.descricao || '—') + '</td>' +
-      '<td>' + dtInicio + '</td>' +
-      '<td>' + dtFim + '</td>' +
-      '<td>' + (c.duracao_meses || '—') + ' meses</td>' +
-      '<td><strong>' + valor + '</strong></td>' +
+      '<td style="white-space:nowrap">' + dtInicio + '</td>' +
+      '<td style="white-space:nowrap">' + dtFim + '</td>' +
+      '<td style="white-space:nowrap"><strong>' + valor + '</strong></td>' +
       '<td>' + statusBadge + '</td>' +
-      '<td>' + (servicosBadges || '<span style="color:#9CA3AF">—</span>') + '</td>' +
-      '<td>' + diasLabel + '</td>' +
-      '<td>' +
-        '<button class="btn-icon" title="Fechamentos" onclick=\'abrirDetalheContrato(' + JSON.stringify(c) + ')\'><i class="ti ti-calendar-stats" style="color:#7C3AED"></i></button>' +
-        '<button class="btn-icon" title="Editar" onclick=\'abrirModalContrato(' + JSON.stringify(c) + ')\'><i class="ti ti-pencil"></i></button>' +
-        (c.status === 'ativo' ? '<button class="btn-icon" title="Renovar" onclick="renovarContrato(\'' + c.id + '\')"><i class="ti ti-refresh" style="color:#3730A3"></i></button>' : '') +
+      '<td style="white-space:nowrap">' +
+        '<button class="btn-icon" title="Detalhes e Fechamentos" onclick=\'abrirDetalheContrato(' + cJson + ')\'><i class="ti ti-eye" style="color:#1D4ED8"></i></button>' +
+        '<button class="btn-icon" title="Editar" onclick=\'abrirModalContrato(' + cJson + ')\'><i class="ti ti-pencil"></i></button>' +
         '<button class="btn-icon" title="Excluir" onclick="excluirContrato(\'' + c.id + '\')"><i class="ti ti-trash" style="color:#DC2626"></i></button>' +
       '</td>' +
       '</tr>';
   }).join('');
 
   wrap.innerHTML = '<table class="erp-table">' +
-    '<thead><tr><th>Cliente</th><th>Número</th><th>Tipo</th><th>Descrição</th><th>Início</th><th>Fim</th><th>Duração</th><th>Valor/mês</th><th>Status</th><th>Serviços</th><th>Vencimento</th><th></th></tr></thead>' +
+    '<thead><tr>' +
+      '<th>Cliente</th><th>Número</th><th>Tipo</th><th>Início</th><th>Fim</th><th>Valor/mês</th><th>Status</th><th></th>' +
+    '</tr></thead>' +
     '<tbody>' + rows + '</tbody></table>';
 }
 
@@ -526,17 +513,46 @@ async function _sincronizarEquipamentosContrato(contratoId, numero) {
 
 async function abrirDetalheContrato(c) {
   _fcContratoAtual = c;
-  document.getElementById('det-contrato-titulo').textContent = 'Fechamentos — ' + (c.numero || 'Contrato');
   var tb = { manutencao: { l: 'Manutenção', bg: '#DBEAFE', c: '#1D4ED8' }, locacao: { l: 'Locação', bg: '#DCFCE7', c: '#15803D' }, avulso: { l: 'Avulso', bg: '#FED7AA', c: '#C2410C' } };
   var t = tb[c.tipo_contrato] || { l: c.tipo_contrato || '—', bg: '#E5E7EB', c: '#374151' };
   var tipoBadge = '<span class="badge" style="background:' + t.bg + ';color:' + t.c + '">' + t.l + '</span>';
-  document.getElementById('det-contrato-info').innerHTML =
-    '<strong>' + _esc(c.numero || '—') + '</strong> ' +
-    tipoBadge + ' ' +
-    '<span class="badge badge-' + c.status + '">' + _cStatusLabel(c.status) + '</span>' +
-    (c.descricao ? ' <span style="color:#6B7280">— ' + _esc(c.descricao) + '</span>' : '') +
-    (c.valor_mensal ? ' <span style="margin-left:8px">R$ ' + Number(c.valor_mensal).toFixed(2).replace('.', ',') + '/mês</span>' : '') +
-    (c.tipo_contrato === 'locacao' && c.franquia_paginas ? ' <span style="color:#6B7280;font-size:12px">· Franquia: ' + c.franquia_paginas + ' págs</span>' : '');
+  document.getElementById('det-contrato-titulo').textContent = 'Contrato ' + (c.numero || '') + ' — Detalhes e Fechamentos';
+
+  var servicos = Array.isArray(c.servicos_contratados) ? c.servicos_contratados : [];
+  var cores = { Impressao: '#0A4B8D', Notebook: '#7C3AED', Desktop: '#065F46', 'TEFFE IA': '#F87A13' };
+  var servicosBadges = servicos.length
+    ? servicos.map(function(s) { return '<span class="badge" style="background:' + (cores[s]||'#6B7280') + ';color:#fff;margin-right:3px">' + _esc(s) + '</span>'; }).join('')
+    : '<span style="color:#9CA3AF">—</span>';
+  var dtInicio = c.data_inicio ? new Date(c.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  var dtFim = c.data_fim ? new Date(c.data_fim + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  var fmt2 = function(v) { return v ? 'R$ ' + Number(v).toFixed(2).replace('.', ',') : '—'; };
+
+  function di(label, val) {
+    return val ? '<div class="adm-det-row"><span class="adm-det-label">' + label + '</span><span class="adm-det-val">' + val + '</span></div>' : '';
+  }
+
+  var infoHtml = '<div class="adm-det-grid" style="grid-template-columns:1fr 1fr 1fr;gap:6px 16px;margin-bottom:12px">' +
+    di('Número', '<strong style="font-family:monospace">' + _esc(c.numero || '—') + '</strong>') +
+    di('Tipo', tipoBadge) +
+    di('Status', '<span class="badge badge-' + c.status + '">' + _cStatusLabel(c.status) + '</span>') +
+    di('Início', dtInicio) +
+    di('Fim', dtFim) +
+    di('Duração', c.duracao_meses ? c.duracao_meses + ' meses' : '—') +
+    di('Dia Vencimento', c.dia_vencimento ? 'Dia ' + c.dia_vencimento : '—') +
+    di('Valor Mensal', '<strong>' + fmt2(c.valor_mensal) + '</strong>') +
+    di('Índice', c.indice_reajuste || '—') +
+    (c.tipo_contrato === 'manutencao' ? di('Pág PB', c.valor_pagina_pb ? 'R$ ' + Number(c.valor_pagina_pb).toFixed(4) : '—') : '') +
+    (c.tipo_contrato === 'manutencao' ? di('Pág Color', c.valor_pagina_color ? 'R$ ' + Number(c.valor_pagina_color).toFixed(4) : '—') : '') +
+    (c.tipo_contrato === 'locacao' ? di('Franquia', c.franquia_paginas ? c.franquia_paginas + ' págs' : '—') : '') +
+    (c.tipo_contrato === 'locacao' ? di('Excedente PB', c.valor_excedente_pb ? 'R$ ' + Number(c.valor_excedente_pb).toFixed(4) : '—') : '') +
+    (c.tipo_contrato === 'locacao' ? di('Excedente Color', c.valor_excedente_color ? 'R$ ' + Number(c.valor_excedente_color).toFixed(4) : '—') : '') +
+    (c.tipo_contrato === 'locacao' ? di('Rollover', c.rollover_ativo ? '<span style="color:#15803D">✓ Ativo</span>' : 'Inativo') : '') +
+    '</div>' +
+    (servicos.length ? di('Serviços', servicosBadges) : '') +
+    (c.descricao ? '<div style="margin-top:8px"><span class="adm-det-label">Descrição</span><div style="color:#374151;margin-top:3px">' + _esc(c.descricao) + '</div></div>' : '') +
+    (c.observacao ? '<div style="margin-top:8px"><span class="adm-det-label">Observação</span><div style="color:#374151;margin-top:3px">' + _esc(c.observacao) + '</div></div>' : '');
+
+  document.getElementById('det-contrato-info').innerHTML = infoHtml;
   await fcCarregarFechamentos(c.id);
   document.getElementById('modal-detalhe-contrato').classList.add('open');
 }

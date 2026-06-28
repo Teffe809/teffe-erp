@@ -31,8 +31,15 @@ async function carregarProspectos() {
         ? '<div class="kc-prox' + (vencido ? ' vencido' : '') + '"><i class="ti ti-calendar"></i> ' +
           new Date(p.proximo_contato + 'T12:00:00').toLocaleDateString('pt-BR') + (vencido ? ' ⚠' : '') + '</div>'
         : '';
-      return '<div class="kanban-card s-' + col.key + '" onclick=\'abrirModalProspecto(' + JSON.stringify(p) + ')\'>' +
-        '<div class="kc-empresa">' + _esc(p.empresa) + '</div>' +
+      var pJson = JSON.stringify(p);
+      return '<div class="kanban-card s-' + col.key + '">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
+          '<div class="kc-empresa" style="flex:1;cursor:pointer" onclick=\'abrirModalProspecto(' + pJson + ')\'>' + _esc(p.empresa) + '</div>' +
+          '<div style="display:flex;gap:2px;flex-shrink:0;margin-left:4px">' +
+            '<button class="btn-icon" title="Editar" style="padding:2px;font-size:13px" onclick=\'abrirModalProspecto(' + pJson + ')\'><i class="ti ti-pencil"></i></button>' +
+            '<button class="btn-icon" title="Excluir" style="padding:2px;font-size:13px;color:#DC2626" onclick="excluirProspecto(\'' + p.id + '\')"><i class="ti ti-trash"></i></button>' +
+          '</div>' +
+        '</div>' +
         '<div class="kc-contato">' + _esc(p.contato) + (p.cargo ? ' · ' + _esc(p.cargo) : '') + '</div>' +
         (p.telefone ? '<div class="kc-tel">' + _esc(p.telefone) + '</div>' : '') +
         proxLabel +
@@ -107,6 +114,15 @@ async function salvarProspecto() {
 
   if (!res.ok) { alert('Erro ao salvar: ' + JSON.stringify(res.data)); return; }
   fecharModal('modal-prospecto');
+  carregarProspectos();
+}
+
+async function excluirProspecto(id) {
+  if (!confirm('Excluir este prospecto? As interações vinculadas também serão removidas. Esta ação não pode ser desfeita.')) return;
+  await sf('/rest/v1/prospecto_interacoes?prospecto_id=eq.' + id, { method: 'DELETE' });
+  var { ok, data } = await sf('/rest/v1/prospectos?id=eq.' + id, { method: 'DELETE' });
+  if (!ok) { alert('Erro ao excluir: ' + JSON.stringify(data)); return; }
+  registrarLog('prospecto_excluido', { id });
   carregarProspectos();
 }
 

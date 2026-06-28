@@ -243,7 +243,7 @@ body{font-family:var(--font);background:var(--bg);color:#1a1a2e;font-size:14px;}
 .badge-encerrado,.badge-concluido,.badge-resolvido{background:#DCFCE7;color:#15803D;}
 
 /* ── UPPERCASE EM INPUTS (exceto email, url, senha, número, data) ── */
-input:not([type="email"]):not([type="url"]):not([type="password"]):not([type="number"]):not([type="date"]):not([type="month"]):not([type="time"]):not([type="color"]),
+input:not([type="email"]):not([type="url"]):not([type="password"]):not([type="number"]):not([type="date"]):not([type="month"]):not([type="time"]):not([type="color"]):not([name*="senha"]):not([id*="senha"]):not([placeholder*="senha"]),
 textarea{text-transform:uppercase;}
-input:not([type="email"]):not([type="url"]):not([type="password"]):not([type="number"]):not([type="date"]):not([type="month"]):not([type="time"]):not([type="color"])::placeholder,
+input:not([type="email"]):not([type="url"]):not([type="password"]):not([type="number"]):not([type="date"]):not([type="month"]):not([type="time"]):not([type="color"]):not([name*="senha"]):not([id*="senha"])::placeholder,
 textarea::placeholder{text-transform:uppercase;}

@@ -30,7 +30,7 @@ async function carregarInsumos() {
       ? '<span class="badge" style="background:#FEE2E2;color:#DC2626">Baixo</span>'
       : '<span class="badge" style="background:#DCFCE7;color:#16A34A">OK</span>';
     return '<tr' + (alerta ? ' style="background:#FFF5F5"' : '') + '>' +
-      '<td><strong>' + _esc(i.nome) + '</strong>' + (i.codigo ? '<br><small style="color:#9CA3AF">' + _esc(i.codigo) + '</small>' : '') + '</td>' +
+      '<td>' + (i.codigo ? '<strong style="font-family:monospace;font-size:14px">' + _esc(i.codigo) + '</strong><br>' : '') + '<small style="color:#374151">' + _esc(i.nome) + '</small></td>' +
       '<td>' + (tipoLabel[i.tipo] || i.tipo || '—') + '</td>' +
       '<td>' + _esc(i.modelo_equipamento || '—') + '</td>' +
       '<td>' + (i.quantidade_estoque || 0) + '</td>' +

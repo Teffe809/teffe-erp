@@ -389,9 +389,21 @@ async function renovarContrato(id) {
 }
 
 async function excluirContrato(id) {
-  if (!confirm('Excluir este contrato? As parcelas geradas NÃO serão excluídas automaticamente.')) return;
+  if (!confirm('Excluir este contrato? Esta ação não pode ser desfeita.')) return;
+
+  // Verificar boletos vinculados
+  const { data: boletos } = await sf('/rest/v1/boletos?contrato_id=eq.' + id + '&select=id&limit=1');
+  if (boletos && boletos.length) {
+    alert('Este contrato possui boletos lançados.\nExclua os boletos vinculados antes de excluir o contrato.');
+    return;
+  }
+
+  // Remover registros dependentes primeiro
+  await sf('/rest/v1/financeiro_receber?contrato_id=eq.' + id, { method: 'DELETE' });
+  await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + id, { method: 'DELETE' });
+
   const res = await sf('/rest/v1/contratos?id=eq.' + id, { method: 'DELETE' });
-  if (!res.ok) { alert('Erro ao excluir: ' + JSON.stringify(res.data)); return; }
+  if (!res.ok) { alert('Erro ao excluir: ' + (res.data && res.data.message ? res.data.message : JSON.stringify(res.data))); return; }
   carregarContratos();
 }
 

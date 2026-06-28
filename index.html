@@ -464,12 +464,18 @@
         <div class="fg"><label>Marca *</label><input id="meq-marca" type="text" placeholder="HP, Canon, Epson..."/></div>
         <div class="fg"><label>Modelo *</label><input id="meq-modelo" type="text" placeholder="LaserJet Pro M428fdn"/></div>
       </div>
-      <div class="fg"><label>Fornecedor</label>
-        <select id="meq-fornecedor"><option value="">— Sem fornecedor —</option></select>
+      <div class="fg-check" style="margin-bottom:10px">
+        <input type="checkbox" id="meq-proprio-cliente" onchange="meqToggleProprio()"/>
+        <label for="meq-proprio-cliente">Equipamento próprio do cliente (não é da Teffe)</label>
       </div>
-      <div class="modal-grid-2">
-        <div class="fg"><label>Data de Compra</label><input id="meq-data-compra" type="date" oninput="meqAtualizarVencimentoGarantia()"/></div>
-        <div class="fg"><label>Garantia (dias)</label><input id="meq-garantia-dias" type="number" min="0" placeholder="365" oninput="meqAtualizarVencimentoGarantia()"/></div>
+      <div id="meq-compra-wrap">
+        <div class="fg"><label>Fornecedor</label>
+          <select id="meq-fornecedor"><option value="">— Sem fornecedor —</option></select>
+        </div>
+        <div class="modal-grid-2">
+          <div class="fg"><label>Data de Compra</label><input id="meq-data-compra" type="date" oninput="meqAtualizarVencimentoGarantia()"/></div>
+          <div class="fg"><label>Garantia (dias)</label><input id="meq-garantia-dias" type="number" min="0" placeholder="365" oninput="meqAtualizarVencimentoGarantia()"/></div>
+        </div>
       </div>
       <div class="fg" id="meq-garantia-vence-wrap" style="display:none;margin-top:-8px;margin-bottom:4px">
         <span id="meq-garantia-vence" style="font-size:13px;color:#16A34A;font-weight:600"></span>
@@ -923,6 +929,31 @@
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-usuarios-cliente')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL EDITAR TÉCNICO ══════════════════════ -->
+<div class="modal-overlay" id="modal-editar-tecnico" onclick="if(event.target===this)fecharModal('modal-editar-tecnico')">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-header">
+      <h2>Editar Técnico</h2>
+      <button class="modal-close" onclick="fecharModal('modal-editar-tecnico')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tec-edit-id"/>
+      <div class="fg" style="margin-bottom:8px;padding:8px 12px;background:#F9FAFB;border-radius:6px;border:1px solid #E5E7EB">
+        <label style="font-size:11px;color:#6B7280">E-mail (não editável)</label>
+        <div id="tec-edit-email-display" style="font-size:14px;color:#374151;margin-top:2px"></div>
+      </div>
+      <div class="fg"><label>Nome *</label><input id="tec-edit-nome" type="text" placeholder="Nome completo"/></div>
+      <div class="fg"><label>Telefone</label><input id="tec-edit-tel" type="text" placeholder="(XX) XXXXX-XXXX"/></div>
+      <div class="fg"><label>Matrícula</label><input id="tec-edit-mat" type="text" placeholder="Ex: T001"/></div>
+      <div id="tec-edit-erro" style="display:none;color:#DC2626;font-size:13px;margin-top:6px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-editar-tecnico')">Cancelar</button>
+      <button class="btn-primary" onclick="erpTecSalvarEdicao()">Salvar</button>
     </div>
   </div>
 </div>

@@ -92,6 +92,9 @@ async function abrirModalEquipamento(e) {
   document.getElementById('meq-obs').value = e ? (e.observacoes || '') : '';
   document.getElementById('meq-status').value = e ? (e.status || 'disponivel') : 'disponivel';
   document.getElementById('meq-ultimo-contador').value = e ? (e.ultimo_contador || 0) : 0;
+  var proprio = e ? !!e.proprio_cliente : false;
+  document.getElementById('meq-proprio-cliente').checked = proprio;
+  document.getElementById('meq-compra-wrap').style.display = proprio ? 'none' : 'block';
   meqAtualizarVencimentoGarantia();
 
   var tipo = e ? (e.tipo_impressao || 'monocromatico') : 'monocromatico';
@@ -134,6 +137,15 @@ async function abrirModalEquipamento(e) {
   document.getElementById('modal-equipamento').classList.add('open');
 }
 
+function meqToggleProprio() {
+  var proprio = document.getElementById('meq-proprio-cliente').checked;
+  document.getElementById('meq-compra-wrap').style.display = proprio ? 'none' : 'block';
+  if (proprio) {
+    var wrap = document.getElementById('meq-garantia-vence-wrap');
+    if (wrap) wrap.style.display = 'none';
+  }
+}
+
 function meqAtualizarVencimentoGarantia() {
   var dataCompra = document.getElementById('meq-data-compra').value;
   var dias = parseInt(document.getElementById('meq-garantia-dias').value);
@@ -171,6 +183,7 @@ async function salvarEquipamento() {
     localizacao: document.getElementById('meq-localizacao').value.trim() || null,
     observacoes: document.getElementById('meq-obs').value.trim() || null,
     ultimo_contador: parseInt(document.getElementById('meq-ultimo-contador').value) || 0,
+    proprio_cliente: document.getElementById('meq-proprio-cliente').checked,
   };
 
   console.log('[Equipamentos] payload:', payload);

@@ -56,6 +56,7 @@ async function erpTecCarregar() {
         '</div>' +
       '</td>' +
       '<td>' +
+        '<button class="btn-icon" title="Editar" onclick=\'erpTecAbrirEditar(' + JSON.stringify(t) + ')\'><i class="ti ti-pencil"></i></button>' +
         '<button class="btn-icon" style="color:#DC2626" title="Remover" onclick="erpTecDeletar(\'' + t.id + '\')"><i class="ti ti-trash"></i></button>' +
       '</td>' +
       '</tr>';
@@ -134,6 +135,36 @@ async function erpTecCriar() {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   registrarLog('tecnico_criado', { nome, email });
+  erpTecCarregar();
+}
+
+function erpTecAbrirEditar(t) {
+  document.getElementById('tec-edit-id').value = t.id;
+  document.getElementById('tec-edit-nome').value = t.nome || '';
+  document.getElementById('tec-edit-tel').value = t.telefone || '';
+  document.getElementById('tec-edit-mat').value = t.matricula || '';
+  document.getElementById('tec-edit-email-display').textContent = t.email || '';
+  document.getElementById('modal-editar-tecnico').classList.add('open');
+}
+
+async function erpTecSalvarEdicao() {
+  const id   = document.getElementById('tec-edit-id').value;
+  const nome = document.getElementById('tec-edit-nome').value.trim();
+  const erroEl = document.getElementById('tec-edit-erro');
+  if (!nome) { erroEl.style.display = 'block'; erroEl.textContent = 'Nome é obrigatório.'; return; }
+
+  const payload = {
+    nome,
+    telefone:  document.getElementById('tec-edit-tel').value.trim() || null,
+    matricula: document.getElementById('tec-edit-mat').value.trim() || null,
+  };
+  const { ok, data } = await sf('/rest/v1/tecnicos?id=eq.' + id, {
+    method: 'PATCH',
+    headers: { 'Prefer': 'return=minimal' },
+    body: JSON.stringify(payload)
+  });
+  if (!ok) { erroEl.style.display = 'block'; erroEl.textContent = (data && data.message) ? data.message : 'Erro ao salvar.'; return; }
+  fecharModal('modal-editar-tecnico');
   erpTecCarregar();
 }
 

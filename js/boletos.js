@@ -51,6 +51,8 @@ async function carregarBoletos() {
     const btnPdf = b.arquivo_url
       ? '<a class="btn-icon" href="' + _esc(b.arquivo_url) + '" target="_blank" title="Download PDF"><i class="ti ti-download"></i></a>'
       : '';
+    const btnEdit = '<button class="btn-icon" title="Editar" onclick=\'abrirModalBoleto(' + JSON.stringify(b) + ')\'><i class="ti ti-pencil"></i></button>';
+    const btnDel  = '<button class="btn-icon" title="Excluir" onclick="excluirBoleto(\'' + b.id + '\')"><i class="ti ti-trash" style="color:#DC2626"></i></button>';
     return '<tr' + rowCls + '>' +
       '<td><strong>' + _esc(cli) + '</strong></td>' +
       '<td>' + _esc(b.numero_boleto || '—') + '</td>' +
@@ -58,7 +60,7 @@ async function carregarBoletos() {
       '<td><strong>' + val + '</strong></td>' +
       '<td>' + venc + '</td>' +
       '<td>' + badge + '</td>' +
-      '<td>' + btnPago + btnPdf + '</td>' +
+      '<td>' + btnPago + btnPdf + btnEdit + btnDel + '</td>' +
       '</tr>';
   }).join('');
 
@@ -173,6 +175,14 @@ function abrirModalPagamentoBoleto(id) {
   document.getElementById('mpag-data').value = new Date().toISOString().slice(0, 10);
   document.getElementById('mpag-obs').value = '';
   document.getElementById('modal-pagamento').classList.add('open');
+}
+
+async function excluirBoleto(id) {
+  if (!confirm('Excluir este boleto? Esta ação não pode ser desfeita.')) return;
+  const { ok, data: errData } = await sf('/rest/v1/boletos?id=eq.' + id, { method: 'DELETE' });
+  if (!ok) { alert('Erro ao excluir boleto: ' + JSON.stringify(errData)); return; }
+  registrarLog('boleto_excluido', { id });
+  carregarBoletos();
 }
 
 async function confirmarPagamentoBoleto(id, data) {

@@ -249,7 +249,14 @@ async function erpChamAbrirDetalhe(jsonStr) {
     (c.descricao ? '<div class="adm-det-section"><div class="adm-det-label" style="margin-bottom:6px">Descrição do Defeito</div><div class="adm-det-text">' + _esc(c.descricao).replace(/\n/g,'<br>') + '</div></div>' : '') +
     (encerrado && c.resolucao ? '<div class="adm-det-section" style="margin-top:12px"><div class="adm-det-label" style="margin-bottom:6px">Resolução do Técnico</div><div class="adm-det-text adm-det-resolucao">' + _esc(c.resolucao).replace(/\n/g,'<br>') + '</div></div>' : '') +
     pecasHtml +
-    fotosHtml;
+    fotosHtml +
+    '<div class="adm-det-section" style="margin-top:16px;background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:9px;padding:12px 14px">' +
+      '<div class="adm-det-label" style="color:#92400E;margin-bottom:8px">⚠️ Observações Internas (uso interno)</div>' +
+      '<textarea id="erp-obs-interna-ta" class="ac-input" rows="3" placeholder="Anotações internas — NÃO visível ao cliente...">' + (c.observacoes_internas ? _esc(c.observacoes_internas) : '') + '</textarea>' +
+      '<button id="erp-obs-interna-btn" class="adm-btn adm-btn-sm adm-btn-outline" style="margin-top:8px" onclick="erpSalvarObsInterna(\'' + c.id + '\')">' +
+        '<i class="ti ti-device-floppy"></i> Salvar observação' +
+      '</button>' +
+    '</div>';
 
   document.getElementById('erp-cham-detalhe-btn-os').onclick = function() { erpChamImprimirOS(c, clienteNome, equipamento, tecNome); };
 
@@ -263,6 +270,17 @@ async function erpChamAbrirDetalhe(jsonStr) {
       btnBoletoAvulso.style.display = 'none';
     }
   }
+}
+
+async function erpSalvarObsInterna(id) {
+  var ta = document.getElementById('erp-obs-interna-ta');
+  if (!ta) return;
+  var val = ta.value.trim();
+  var btn = document.getElementById('erp-obs-interna-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> Salvando...'; }
+  var { ok } = await sf('/rest/v1/chamados?id=eq.' + id, { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ observacoes_internas: val || null }) });
+  if (!ok) { alert('Erro ao salvar observação.'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar observação'; } return; }
+  if (btn) { btn.innerHTML = '<i class="ti ti-check"></i> Salvo'; setTimeout(function() { btn.disabled = false; btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar observação'; }, 1800); }
 }
 
 async function erpChamGerarBoletoAvulso(c, clienteNome) {

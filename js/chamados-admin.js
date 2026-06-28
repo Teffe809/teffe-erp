@@ -252,6 +252,45 @@ async function erpChamAbrirDetalhe(jsonStr) {
     fotosHtml;
 
   document.getElementById('erp-cham-detalhe-btn-os').onclick = function() { erpChamImprimirOS(c, clienteNome, equipamento, tecNome); };
+
+  // Botão boleto avulso
+  var btnBoletoAvulso = document.getElementById('erp-cham-detalhe-btn-boleto-avulso');
+  if (btnBoletoAvulso) {
+    if (c.tipo_chamado === 'avulso') {
+      btnBoletoAvulso.style.display = 'inline-flex';
+      btnBoletoAvulso.onclick = function() { erpChamGerarBoletoAvulso(c, clienteNome); };
+    } else {
+      btnBoletoAvulso.style.display = 'none';
+    }
+  }
+}
+
+async function erpChamGerarBoletoAvulso(c, clienteNome) {
+  var valorBase = c.valor_servico || 0;
+  // Soma peças utilizadas
+  if (c._pecas && c._pecas.length) {
+    c._pecas.forEach(function(p) { valorBase += (p.quantidade || 1) * (p._peca && p._peca.valor_unitario ? p._peca.valor_unitario : 0); });
+  }
+  var valorStr = prompt('Valor do boleto avulso (R$):\nValor do serviço: ' + (c.valor_servico || 0), valorBase.toFixed(2));
+  if (valorStr === null) return;
+  var valor = parseFloat(valorStr.replace(',', '.'));
+  if (isNaN(valor) || valor <= 0) { alert('Valor inválido.'); return; }
+  var vencStr = prompt('Data de vencimento (AAAA-MM-DD):', new Date(Date.now() + 7*86400000).toISOString().slice(0,10));
+  if (!vencStr) return;
+  var r = await sf('/rest/v1/boletos', {
+    method: 'POST',
+    headers: { 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
+      cliente_id: c.cliente_id,
+      descricao: 'Chamado avulso #' + (c.numero || c.id.slice(0,6)) + (clienteNome ? ' — ' + clienteNome : ''),
+      valor: valor,
+      vencimento: vencStr,
+      status: 'a_vencer'
+    })
+  });
+  if (!r.ok) { alert('Erro ao gerar boleto: ' + JSON.stringify(r.data)); return; }
+  registrarLog('boleto_avulso_criado', { chamado_id: c.id, valor });
+  alert('Boleto avulso de R$ ' + valor.toFixed(2).replace('.', ',') + ' criado com sucesso!');
 }
 
 function erpChamFecharDetalhe() {
@@ -280,6 +319,10 @@ async function erpChamAbrirNovo() {
   document.getElementById('nc-prio').value = 'normal';
   document.getElementById('nc-desc').value = '';
   document.getElementById('nc-data').value = new Date().toISOString().slice(0,10);
+  var vWrap = document.getElementById('nc-valor-wrap');
+  if (vWrap) { vWrap.style.display = 'none'; }
+  var vSvc = document.getElementById('nc-valor-servico');
+  if (vSvc) vSvc.value = '';
   const erroEl = document.getElementById('nc-erro');
   erroEl.style.display = 'none'; erroEl.textContent = '';
   const btn = document.getElementById('nc-btn-salvar');
@@ -292,9 +335,22 @@ function erpChamFecharNovo() {
   document.getElementById('modal-cham-novo').classList.remove('open');
 }
 
+function erpChamNcOnTipoChange() {
+  var tipo = document.getElementById('nc-tipo').value;
+  var vWrap = document.getElementById('nc-valor-wrap');
+  if (vWrap) vWrap.style.display = tipo === 'avulso' ? 'block' : 'none';
+  erpChamNcOnClienteChange();
+}
+
 async function erpChamNcOnClienteChange() {
+  const tipo = document.getElementById('nc-tipo').value;
   const clienteId = document.getElementById('nc-cliente').value;
   const sel = document.getElementById('nc-equip');
+
+  if (tipo === 'avulso') {
+    sel.innerHTML = '<option value="">— Não aplicável para chamado avulso —</option>';
+    return;
+  }
   if (!clienteId) { sel.innerHTML = '<option value="">Selecione o cliente primeiro...</option>'; return; }
   sel.innerHTML = '<option value="">Carregando equipamentos...</option>';
   try {
@@ -332,10 +388,11 @@ async function erpChamSalvarNovo() {
   if (!desc) { erroEl.style.display = 'block'; erroEl.textContent = 'Informe a descrição do chamado.'; return; }
   btn.disabled = true; btn.textContent = 'Criando...';
 
+  const tipoChamado = document.getElementById('nc-tipo').value;
   const payload = {
-    tipo_chamado:   document.getElementById('nc-tipo').value,
+    tipo_chamado:   tipoChamado,
     cliente_id:     clienteId,
-    equipamento_id: document.getElementById('nc-equip').value || null,
+    equipamento_id: tipoChamado === 'avulso' ? null : (document.getElementById('nc-equip').value || null),
     tecnico_id:     document.getElementById('nc-tec').value || null,
     descricao:      desc,
     prioridade:     document.getElementById('nc-prio').value,
@@ -343,6 +400,8 @@ async function erpChamSalvarNovo() {
     data_abertura:  new Date().toISOString().slice(0,10),
     status: 'aberto'
   };
+  var valorSvcStr = document.getElementById('nc-valor-servico') ? document.getElementById('nc-valor-servico').value : '';
+  if (tipoChamado === 'avulso' && valorSvcStr) payload.valor_servico = parseFloat(valorSvcStr) || null;
 
   const { ok, data } = await sf('/rest/v1/chamados', {
     method: 'POST',

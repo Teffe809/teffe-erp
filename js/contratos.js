@@ -1,9 +1,15 @@
 /* ═══════════════════════════════════════════════════════
    CONTRATOS
-   Colunas reais: id, created_at, cliente_id, numero,
+   Colunas: id, created_at, cliente_id, numero,
    descricao, data_inicio, data_fim, valor_mensal, status,
-   dia_vencimento, duracao_meses, indice_reajuste, observacao
+   dia_vencimento, duracao_meses, indice_reajuste, observacao,
+   tipo_contrato, valor_fixo, valor_pagina_pb, valor_pagina_color,
+   franquia_paginas, valor_franquia, valor_excedente_pb,
+   valor_excedente_color, rollover_ativo, contador_inicial_pb,
+   contador_inicial_color
 ═══════════════════════════════════════════════════════ */
+
+var _fcContratoAtual = null;
 
 async function carregarContratos() {
   const wrap = document.querySelector('#view-contratos .table-wrap');
@@ -24,6 +30,7 @@ async function carregarContratos() {
     }
   } catch(e) { console.warn('[carregarContratos] erro ao carregar clientes:', e); }
 
+  const _tipoBadgeCfg = { manutencao: { l: 'Manutenção', bg: '#DBEAFE', c: '#1D4ED8' }, locacao: { l: 'Locação', bg: '#DCFCE7', c: '#15803D' }, avulso: { l: 'Avulso', bg: '#FED7AA', c: '#C2410C' } };
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
   const rows = data.map(function(c) {
     const cli = clienteMap[c.cliente_id];
@@ -32,6 +39,8 @@ async function carregarContratos() {
     const fim = c.data_fim ? new Date(c.data_fim + 'T12:00:00') : null;
     const diasFim = fim ? Math.ceil((fim - hoje) / 86400000) : null;
     const statusBadge = '<span class="badge badge-' + c.status + '">' + _cStatusLabel(c.status) + '</span>';
+    const tb = c.tipo_contrato ? (_tipoBadgeCfg[c.tipo_contrato] || { l: c.tipo_contrato, bg: '#E5E7EB', c: '#374151' }) : null;
+    const tipoBadge = tb ? '<span class="badge" style="background:' + tb.bg + ';color:' + tb.c + '">' + tb.l + '</span>' : '—';
     const servicos = Array.isArray(c.servicos_contratados) ? c.servicos_contratados : [];
     const servicosBadges = servicos.map(function(s) {
       const cores = { Impressao: '#0A4B8D', Notebook: '#7C3AED', Desktop: '#065F46', 'TEFFE IA': '#F87A13' };
@@ -53,6 +62,7 @@ async function carregarContratos() {
     return '<tr' + rowCls + '>' +
       '<td><strong>' + clienteLabel + '</strong></td>' +
       '<td>' + _esc(c.numero || '—') + '</td>' +
+      '<td>' + tipoBadge + '</td>' +
       '<td>' + _esc(c.descricao || '—') + '</td>' +
       '<td>' + dtInicio + '</td>' +
       '<td>' + dtFim + '</td>' +
@@ -62,6 +72,7 @@ async function carregarContratos() {
       '<td>' + (servicosBadges || '<span style="color:#9CA3AF">—</span>') + '</td>' +
       '<td>' + diasLabel + '</td>' +
       '<td>' +
+        '<button class="btn-icon" title="Fechamentos" onclick=\'abrirDetalheContrato(' + JSON.stringify(c) + ')\'><i class="ti ti-calendar-stats" style="color:#7C3AED"></i></button>' +
         '<button class="btn-icon" title="Editar" onclick=\'abrirModalContrato(' + JSON.stringify(c) + ')\'><i class="ti ti-pencil"></i></button>' +
         (c.status === 'ativo' ? '<button class="btn-icon" title="Renovar" onclick="renovarContrato(\'' + c.id + '\')"><i class="ti ti-refresh" style="color:#3730A3"></i></button>' : '') +
         '<button class="btn-icon" title="Excluir" onclick="excluirContrato(\'' + c.id + '\')"><i class="ti ti-trash" style="color:#DC2626"></i></button>' +
@@ -70,7 +81,7 @@ async function carregarContratos() {
   }).join('');
 
   wrap.innerHTML = '<table class="erp-table">' +
-    '<thead><tr><th>Cliente</th><th>Número</th><th>Descrição</th><th>Início</th><th>Fim</th><th>Duração</th><th>Valor/mês</th><th>Status</th><th>Serviços</th><th>Vencimento</th><th></th></tr></thead>' +
+    '<thead><tr><th>Cliente</th><th>Número</th><th>Tipo</th><th>Descrição</th><th>Início</th><th>Fim</th><th>Duração</th><th>Valor/mês</th><th>Status</th><th>Serviços</th><th>Vencimento</th><th></th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>';
 }
 
@@ -91,6 +102,19 @@ async function abrirModalContrato(c) {
   document.getElementById('mc-indice').value = c ? (c.indice_reajuste || 'IGP-M') : 'IGP-M';
   document.getElementById('mc-obs').value = c ? (c.observacao || '') : '';
   try { document.getElementById('mc-arquivo').value = ''; } catch(e) {}
+  // Tipo e campos extras
+  var _tipo = c ? (c.tipo_contrato || 'manutencao') : 'manutencao';
+  document.getElementById('mc-tipo').value = _tipo;
+  document.getElementById('mc-val-pb').value = c ? (c.valor_pagina_pb || '') : '';
+  document.getElementById('mc-val-color').value = c ? (c.valor_pagina_color || '') : '';
+  document.getElementById('mc-franquia-pag').value = c ? (c.franquia_paginas || '') : '';
+  document.getElementById('mc-exc-pb').value = c ? (c.valor_excedente_pb || '') : '';
+  document.getElementById('mc-exc-color').value = c ? (c.valor_excedente_color || '') : '';
+  var rolloverEl = document.getElementById('mc-rollover');
+  if (rolloverEl) rolloverEl.checked = c ? (c.rollover_ativo || false) : false;
+  document.getElementById('mc-cont-pb').value = c ? (c.contador_inicial_pb || 0) : 0;
+  document.getElementById('mc-cont-color').value = c ? (c.contador_inicial_color || 0) : 0;
+  mcToggleTipoContrato();
   var srvAtivos = c && Array.isArray(c.servicos_contratados) ? c.servicos_contratados : [];
   ['mc-srv-impressao','mc-srv-notebook','mc-srv-desktop','mc-srv-teffe-ia'].forEach(function(elId) {
     var el = document.getElementById(elId);
@@ -106,15 +130,17 @@ async function abrirModalContrato(c) {
   _mcEquipamentos = [];
   mcLimparBuscaCliente();
   if (c && c.cliente_id) {
-    // Carrega dados do cliente para exibir nome
     try {
       var cr = await sf('/rest/v1/clientes?id=eq.' + c.cliente_id + '&select=id,razao_social,cnpj,codigo');
       if (cr.data && cr.data[0]) mcDefinirCliente(cr.data[0], false);
     } catch(e) { console.warn('[Contratos] erro ao carregar cliente:', e); }
-    // Carrega equipamentos vinculados
     try {
-      var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + c.id + '&select=*,equipamentos(*)');
-      _mcEquipamentos = (er.data || []).filter(function(v){ return !!v.equipamentos; }).map(function(v){ return v.equipamentos; });
+      var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + c.id + '&select=equipamento_id');
+      var eqIds = (er.data || []).map(function(v) { return v.equipamento_id; }).filter(Boolean);
+      if (eqIds.length) {
+        var eqRes = await sf('/rest/v1/equipamentos?id=in.(' + eqIds.join(',') + ')&select=*');
+        _mcEquipamentos = Array.isArray(eqRes.data) ? eqRes.data : [];
+      }
     } catch(e) { console.warn('[Contratos] erro ao carregar equipamentos:', e); }
   }
   document.getElementById('mc-equip-busca').value = '';
@@ -267,10 +293,11 @@ async function salvarContrato() {
   const valor = parseFloat(document.getElementById('mc-valor').value);
   const diaVenc = parseInt(document.getElementById('mc-dia-venc').value) || 10;
 
+  const tipo = document.getElementById('mc-tipo').value || 'manutencao';
   if (!clienteId) { alert('Selecione o cliente.'); return; }
   if (!inicio) { alert('Informe a data de início.'); return; }
-  if (!duracao) { alert('Selecione a duração.'); return; }
-  if (!valor || valor <= 0) { alert('Informe o valor mensal.'); return; }
+  if (tipo !== 'avulso' && !duracao) { alert('Selecione a duração.'); return; }
+  if (tipo !== 'avulso' && (!valor || valor <= 0)) { alert('Informe o valor mensal.'); return; }
 
   var numeroManual = document.getElementById('mc-numero').value.trim();
   var numero = numeroManual || null;
@@ -294,19 +321,31 @@ async function salvarContrato() {
     arquivoUrl = await _uploadArquivo('contratos-pdf', path, file);
   }
 
+  var _rollEl = document.getElementById('mc-rollover');
   const payload = {
     cliente_id: clienteId,
     numero,
     descricao: document.getElementById('mc-descricao').value.trim() || null,
     data_inicio: inicio,
-    data_fim: fim,
-    duracao_meses: duracao,
-    valor_mensal: valor,
+    data_fim: fim || null,
+    duracao_meses: duracao || null,
+    valor_mensal: valor || 0,
     dia_vencimento: diaVenc,
     status: document.getElementById('mc-status').value,
     indice_reajuste: document.getElementById('mc-indice').value,
     observacao: document.getElementById('mc-obs').value.trim() || null,
-    servicos_contratados: servicosSelecionados
+    servicos_contratados: servicosSelecionados,
+    tipo_contrato: tipo,
+    valor_pagina_pb: parseFloat(document.getElementById('mc-val-pb').value) || null,
+    valor_pagina_color: parseFloat(document.getElementById('mc-val-color').value) || null,
+    franquia_paginas: parseInt(document.getElementById('mc-franquia-pag').value) || null,
+    valor_excedente_pb: parseFloat(document.getElementById('mc-exc-pb').value) || null,
+    valor_excedente_color: parseFloat(document.getElementById('mc-exc-color').value) || null,
+    rollover_ativo: _rollEl ? _rollEl.checked : false,
+    contador_inicial_pb: parseInt(document.getElementById('mc-cont-pb').value) || 0,
+    contador_inicial_color: parseInt(document.getElementById('mc-cont-color').value) || 0,
+    valor_fixo: tipo === 'manutencao' ? (valor || null) : null,
+    valor_franquia: tipo === 'locacao' ? (valor || null) : null,
   };
   if (arquivoUrl) payload.arquivo_url = arquivoUrl;
 
@@ -327,14 +366,13 @@ async function salvarContrato() {
 
   var contratoIdFinal = id || null;
   if (!id) {
-    // Busca o ID do contrato recém criado (uma única query reutilizada para parcelas + equipamentos)
     const q = await sf('/rest/v1/contratos?numero=eq.' + encodeURIComponent(numero) + '&select=id&order=created_at.desc&limit=1');
     contratoIdFinal = Array.isArray(q.data) && q.data[0] ? q.data[0].id : null;
     console.log('[salvarContrato] contratoId:', contratoIdFinal, '| numero:', numero);
-    if (contratoIdFinal) {
+    if (contratoIdFinal && tipo !== 'avulso' && duracao && valor > 0) {
       await _gerarParcelas(contratoIdFinal, clienteId, inicio, duracao, diaVenc, valor, numero);
-    } else {
-      console.error('[salvarContrato] contratoId não encontrado — parcelas NÃO geradas. q:', q);
+    } else if (!contratoIdFinal) {
+      console.error('[salvarContrato] contratoId não encontrado. q:', q);
       alert('Contrato salvo, mas não foi possível gerar as parcelas. Verifique o console.');
     }
   }
@@ -425,6 +463,19 @@ function _cStatusLabel(s) {
   return { ativo: 'Ativo', encerrado: 'Encerrado', cancelado: 'Cancelado', em_renovacao: 'Em Renovação' }[s] || s;
 }
 
+// ── TIPO DINÂMICO ──
+function mcToggleTipoContrato() {
+  var tipo = document.getElementById('mc-tipo').value;
+  document.getElementById('mc-campos-manutencao').style.display = tipo === 'manutencao' ? '' : 'none';
+  document.getElementById('mc-campos-locacao').style.display   = tipo === 'locacao'     ? '' : 'none';
+  document.getElementById('mc-campos-contadores').style.display = tipo !== 'avulso'     ? '' : 'none';
+  document.getElementById('mc-campos-avulso').style.display    = tipo === 'avulso'      ? '' : 'none';
+  var valRow = document.getElementById('mc-valor-row');
+  if (valRow) valRow.style.display = tipo === 'avulso' ? 'none' : '';
+  var lbl = document.getElementById('mc-valor-label');
+  if (lbl) lbl.textContent = tipo === 'locacao' ? 'Valor da Franquia (R$) *' : tipo === 'avulso' ? 'Valor estimado (R$)' : 'Valor Mensal (R$) *';
+}
+
 function _mesAno(d) {
   return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 }
@@ -467,4 +518,344 @@ async function _sincronizarEquipamentosContrato(contratoId, numero) {
     var eq2 = _mcEquipamentos.find(function(x){ return x.id === exId; }) || { id: exId };
     registrarLog('equipamento_removido', { contrato_id: contratoId, equipamento_id: exId, numero });
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   FECHAMENTO MENSAL
+═══════════════════════════════════════════════════════ */
+
+async function abrirDetalheContrato(c) {
+  _fcContratoAtual = c;
+  document.getElementById('det-contrato-titulo').textContent = 'Fechamentos — ' + (c.numero || 'Contrato');
+  var tb = { manutencao: { l: 'Manutenção', bg: '#DBEAFE', c: '#1D4ED8' }, locacao: { l: 'Locação', bg: '#DCFCE7', c: '#15803D' }, avulso: { l: 'Avulso', bg: '#FED7AA', c: '#C2410C' } };
+  var t = tb[c.tipo_contrato] || { l: c.tipo_contrato || '—', bg: '#E5E7EB', c: '#374151' };
+  var tipoBadge = '<span class="badge" style="background:' + t.bg + ';color:' + t.c + '">' + t.l + '</span>';
+  document.getElementById('det-contrato-info').innerHTML =
+    '<strong>' + _esc(c.numero || '—') + '</strong> ' +
+    tipoBadge + ' ' +
+    '<span class="badge badge-' + c.status + '">' + _cStatusLabel(c.status) + '</span>' +
+    (c.descricao ? ' <span style="color:#6B7280">— ' + _esc(c.descricao) + '</span>' : '') +
+    (c.valor_mensal ? ' <span style="margin-left:8px">R$ ' + Number(c.valor_mensal).toFixed(2).replace('.', ',') + '/mês</span>' : '') +
+    (c.tipo_contrato === 'locacao' && c.franquia_paginas ? ' <span style="color:#6B7280;font-size:12px">· Franquia: ' + c.franquia_paginas + ' págs</span>' : '');
+  await fcCarregarFechamentos(c.id);
+  document.getElementById('modal-detalhe-contrato').classList.add('open');
+}
+
+async function fcCarregarFechamentos(contratoId) {
+  var wrap = document.getElementById('fc-lista-wrap');
+  wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
+  var r = await sf('/rest/v1/fechamentos_mensais?contrato_id=eq.' + contratoId + '&select=*&order=mes_referencia.desc');
+  var rows = Array.isArray(r.data) ? r.data : [];
+  if (!rows.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum fechamento registrado. Clique em "+ Novo Fechamento" para começar.</div>'; return; }
+  var html = '<table class="erp-table"><thead><tr><th>Mês</th><th>Págs PB</th><th>Págs Color</th><th>Valor Fixo</th><th>Excedente</th><th>Total</th><th>Boleto</th></tr></thead><tbody>';
+  rows.forEach(function(f) {
+    var mesLabel = f.mes_referencia ? new Date(f.mes_referencia + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : '—';
+    var total = 'R$ ' + Number(f.valor_total || 0).toFixed(2).replace('.', ',');
+    var boletoSt = f.boleto_gerado
+      ? '<span class="badge" style="background:#DCFCE7;color:#15803D">Gerado</span>'
+      : '<span class="badge" style="background:#FEF3C7;color:#B45309">Pendente</span>';
+    html += '<tr><td><strong>' + mesLabel + '</strong></td><td>' + (f.paginas_pb || 0) + '</td><td>' + (f.paginas_color || 0) + '</td>' +
+      '<td>R$ ' + Number(f.valor_fixo || 0).toFixed(2).replace('.', ',') + '</td>' +
+      '<td>R$ ' + Number(f.valor_excedente || 0).toFixed(2).replace('.', ',') + '</td>' +
+      '<td><strong>' + total + '</strong></td><td>' + boletoSt + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+async function fcAbrirNovoFechamento() {
+  var c = _fcContratoAtual;
+  if (!c) return;
+
+  // Último fechamento para pegar contadores anteriores
+  var r = await sf('/rest/v1/fechamentos_mensais?contrato_id=eq.' + c.id + '&select=*&order=mes_referencia.desc&limit=1');
+  var ultimo = r.data && r.data[0] ? r.data[0] : null;
+  var pbAnt = ultimo ? ultimo.contador_pb_atual : (c.contador_inicial_pb || 0);
+  var colorAnt = ultimo ? ultimo.contador_color_atual : (c.contador_inicial_color || 0);
+
+  // Equipamentos do contrato (informativo)
+  var equips = [];
+  try {
+    var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + c.id + '&select=equipamento_id');
+    var eqIds = (er.data || []).map(function(v) { return v.equipamento_id; }).filter(Boolean);
+    if (eqIds.length) {
+      var eqRes = await sf('/rest/v1/equipamentos?id=in.(' + eqIds.join(',') + ')&select=id,marca,modelo,serial,codigo_teffe');
+      equips = Array.isArray(eqRes.data) ? eqRes.data : [];
+    }
+  } catch(e) {}
+
+  // Mês atual
+  var hoje = new Date();
+  document.getElementById('fc-mes').value = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+
+  // Contadores anteriores
+  document.getElementById('fc-cont-pb-ant').textContent = pbAnt;
+  document.getElementById('fc-cont-color-ant').textContent = colorAnt;
+  document.getElementById('fc-cont-pb-ant-val').value = pbAnt;
+  document.getElementById('fc-cont-color-ant-val').value = colorAnt;
+  document.getElementById('fc-cont-pb').value = '';
+  document.getElementById('fc-cont-color').value = '';
+
+  // Equipamentos (info)
+  var equipWrap = document.getElementById('fc-equip-info');
+  if (equips.length) {
+    equipWrap.innerHTML = equips.map(function(e) {
+      return '<span style="font-size:12px;color:#374151;margin-right:12px"><strong>' + _esc((e.marca || '') + ' ' + (e.modelo || '')) + '</strong>' + (e.serial ? ' S/N:' + e.serial : '') + '</span>';
+    }).join('');
+  } else { equipWrap.innerHTML = ''; }
+
+  // Info de valores
+  var valorBase = c.tipo_contrato === 'locacao' ? (c.valor_franquia || c.valor_mensal || 0) : (c.valor_fixo || c.valor_mensal || 0);
+  document.getElementById('fc-valor-fixo-info').textContent = 'R$ ' + Number(valorBase).toFixed(2).replace('.', ',');
+  document.getElementById('fc-franquia-info').textContent = c.franquia_paginas ? c.franquia_paginas + ' páginas' : '—';
+  document.getElementById('fc-tipo-hidden').value = c.tipo_contrato || 'manutencao';
+
+  // Rollover info
+  var rolloverEl = document.getElementById('fc-rollover-info');
+  rolloverEl.style.display = 'none';
+  if (c.tipo_contrato === 'locacao' && c.rollover_ativo) {
+    rolloverEl.style.display = 'block';
+    var rv = await sf('/rest/v1/rollover_creditos?contrato_id=eq.' + c.id + '&expirado=eq.false&validade=gte.' + hoje.toISOString().slice(0, 10) + '&select=paginas_credito,paginas_usadas&order=validade.asc');
+    var creditos = rv.data || [];
+    var totalCredito = creditos.reduce(function(acc, cr) { return acc + (cr.paginas_credito - cr.paginas_usadas); }, 0);
+    rolloverEl.innerHTML = '<div style="background:#EDE9FE;border:1px solid #C4B5FD;border-radius:6px;padding:8px 12px;font-size:13px"><strong>Rollover disponível:</strong> ' + totalCredito + ' páginas de crédito (' + creditos.length + ' lote(s))</div>';
+  }
+
+  // Reset
+  document.getElementById('fc-resumo').innerHTML = '';
+  document.getElementById('fc-calc-total').value = '';
+  document.getElementById('fc-calc-val-fixo').value = '';
+  document.getElementById('fc-calc-val-pag').value = '';
+  document.getElementById('fc-calc-val-exc').value = '';
+  document.getElementById('fc-calc-rollover-usado').value = '0';
+  document.getElementById('fc-calc-excedente-pag').value = '0';
+  document.getElementById('fc-calc-sobra-pag').value = '0';
+  document.getElementById('fc-obs').value = '';
+  document.getElementById('fc-gerar-boleto').checked = true;
+  document.getElementById('fc-btn-confirmar').disabled = false;
+  document.getElementById('fc-btn-confirmar').innerHTML = '<i class="ti ti-check"></i> Confirmar e Gerar Boleto';
+
+  document.getElementById('modal-fechamento-mensal').classList.add('open');
+}
+
+async function fcCalcular() {
+  var c = _fcContratoAtual;
+  if (!c) return;
+
+  var pbAnt = parseInt(document.getElementById('fc-cont-pb-ant-val').value) || 0;
+  var colorAnt = parseInt(document.getElementById('fc-cont-color-ant-val').value) || 0;
+  var pbAtual = parseInt(document.getElementById('fc-cont-pb').value);
+  var colorAtual = parseInt(document.getElementById('fc-cont-color').value);
+  var resumoEl = document.getElementById('fc-resumo');
+
+  if (isNaN(pbAtual) || isNaN(colorAtual) || document.getElementById('fc-cont-pb').value === '' || document.getElementById('fc-cont-color').value === '') {
+    resumoEl.innerHTML = '<div style="color:#6B7280;font-size:13px;padding:8px">Preencha os dois contadores para ver o cálculo.</div>';
+    document.getElementById('fc-calc-total').value = '';
+    return;
+  }
+
+  var pagPb = pbAtual - pbAnt;
+  var pagColor = colorAtual - colorAnt;
+  if (pagPb < 0 || pagColor < 0) {
+    resumoEl.innerHTML = '<div style="color:#DC2626;font-size:13px;padding:8px">Contador atual não pode ser menor que o anterior.</div>';
+    document.getElementById('fc-calc-total').value = '';
+    return;
+  }
+
+  var tipo = c.tipo_contrato || 'manutencao';
+  var valorFixo = 0, valorPaginas = 0, valorExcedente = 0;
+  var rolloverUsado = 0, sobraPages = 0, excessPages = 0;
+
+  if (tipo === 'manutencao') {
+    valorFixo = Number(c.valor_fixo || c.valor_mensal || 0);
+    valorPaginas = (pagPb * Number(c.valor_pagina_pb || 0)) + (pagColor * Number(c.valor_pagina_color || 0));
+  } else if (tipo === 'locacao') {
+    valorFixo = Number(c.valor_franquia || c.valor_mensal || 0);
+    var totalPag = pagPb + pagColor;
+    var franquia = c.franquia_paginas || 0;
+    var excedente = Math.max(0, totalPag - franquia);
+    sobraPages = Math.max(0, franquia - totalPag);
+
+    if (excedente > 0 && c.rollover_ativo) {
+      var hoje = new Date();
+      var rv = await sf('/rest/v1/rollover_creditos?contrato_id=eq.' + c.id + '&expirado=eq.false&validade=gte.' + hoje.toISOString().slice(0,10) + '&select=paginas_credito,paginas_usadas&order=validade.asc');
+      var creditos = rv.data || [];
+      var restExc = excedente;
+      for (var i = 0; i < creditos.length && restExc > 0; i++) {
+        var disp = creditos[i].paginas_credito - creditos[i].paginas_usadas;
+        var usar = Math.min(disp, restExc);
+        rolloverUsado += usar;
+        restExc -= usar;
+      }
+      excedente = restExc;
+    }
+    excessPages = excedente;
+    var totalRod = pagPb + pagColor || 1;
+    var ratioColor = pagColor / totalRod;
+    var ratioPb = 1 - ratioColor;
+    valorExcedente = (excedente * ratioPb * Number(c.valor_excedente_pb || 0)) + (excedente * ratioColor * Number(c.valor_excedente_color || 0));
+  }
+
+  var total = valorFixo + valorPaginas + valorExcedente;
+
+  // Store calculated values
+  document.getElementById('fc-calc-total').value = total.toFixed(2);
+  document.getElementById('fc-calc-val-fixo').value = valorFixo.toFixed(2);
+  document.getElementById('fc-calc-val-pag').value = valorPaginas.toFixed(2);
+  document.getElementById('fc-calc-val-exc').value = valorExcedente.toFixed(2);
+  document.getElementById('fc-calc-rollover-usado').value = rolloverUsado;
+  document.getElementById('fc-calc-excedente-pag').value = excessPages;
+  document.getElementById('fc-calc-sobra-pag').value = sobraPages;
+
+  var fmt = function(v) { return 'R$ ' + v.toFixed(2).replace('.', ','); };
+  var html = '<div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:8px;padding:12px 14px">' +
+    '<div style="font-weight:700;color:#0369A1;margin-bottom:10px;font-size:13px">Resumo do Fechamento</div>' +
+    '<div style="display:grid;grid-template-columns:1fr auto;gap:4px 24px;font-size:13px">' +
+    '<span>Páginas PB:</span><span><strong>' + pagPb + '</strong></span>' +
+    '<span>Páginas Color:</span><span><strong>' + pagColor + '</strong></span>';
+
+  if (tipo === 'locacao') {
+    html += '<span>Total de páginas:</span><span>' + (pagPb + pagColor) + '</span>';
+    html += '<span>Franquia:</span><span>' + (c.franquia_paginas || 0) + ' págs</span>';
+    if (sobraPages > 0) html += '<span style="color:#15803D">Sobra → crédito rollover:</span><span style="color:#15803D">+' + sobraPages + ' págs (90 dias)</span>';
+    if (rolloverUsado > 0) html += '<span style="color:#7C3AED">Rollover abatido:</span><span style="color:#7C3AED">−' + rolloverUsado + ' págs</span>';
+    if (excessPages > 0) html += '<span style="color:#DC2626">Excedente cobrado:</span><span style="color:#DC2626">' + excessPages + ' págs</span>';
+  }
+
+  html += '<span style="padding-top:6px;border-top:1px solid #BAE6FD;margin-top:4px">Valor fixo/franquia:</span><span style="padding-top:6px;border-top:1px solid #BAE6FD;margin-top:4px">' + fmt(valorFixo) + '</span>';
+  if (valorPaginas > 0) html += '<span>Valor páginas:</span><span>' + fmt(valorPaginas) + '</span>';
+  if (valorExcedente > 0) html += '<span style="color:#DC2626">Valor excedente:</span><span style="color:#DC2626">' + fmt(valorExcedente) + '</span>';
+  html += '<span style="font-weight:700;font-size:15px;border-top:2px solid #0369A1;padding-top:6px;margin-top:6px">TOTAL:</span>' +
+    '<span style="font-weight:700;font-size:15px;color:#0369A1;border-top:2px solid #0369A1;padding-top:6px;margin-top:6px">' + fmt(total) + '</span>';
+  html += '</div></div>';
+  resumoEl.innerHTML = html;
+}
+
+async function fcSalvarFechamento() {
+  var c = _fcContratoAtual;
+  if (!c) return;
+
+  var mes = document.getElementById('fc-mes').value;
+  var pbAnt = parseInt(document.getElementById('fc-cont-pb-ant-val').value) || 0;
+  var colorAnt = parseInt(document.getElementById('fc-cont-color-ant-val').value) || 0;
+  var pbAtual = parseInt(document.getElementById('fc-cont-pb').value);
+  var colorAtual = parseInt(document.getElementById('fc-cont-color').value);
+  var totalStr = document.getElementById('fc-calc-total').value;
+  var obs = document.getElementById('fc-obs').value.trim();
+  var gerarBoleto = document.getElementById('fc-gerar-boleto').checked;
+
+  if (!mes) { alert('Informe o mês de referência.'); return; }
+  if (isNaN(pbAtual) || isNaN(colorAtual) || document.getElementById('fc-cont-pb').value === '') { alert('Preencha os contadores e calcule antes de confirmar.'); return; }
+  if (!totalStr) { alert('Clique nos campos de contador para calcular antes de confirmar.'); return; }
+
+  var total = parseFloat(totalStr);
+  var pagPb = pbAtual - pbAnt;
+  var pagColor = colorAtual - colorAnt;
+  if (pagPb < 0 || pagColor < 0) { alert('Contador atual não pode ser menor que o anterior.'); return; }
+
+  var rolloverUsado = parseInt(document.getElementById('fc-calc-rollover-usado').value) || 0;
+  var excessPages = parseInt(document.getElementById('fc-calc-excedente-pag').value) || 0;
+  var sobraPages = parseInt(document.getElementById('fc-calc-sobra-pag').value) || 0;
+  var valorFixo = parseFloat(document.getElementById('fc-calc-val-fixo').value) || 0;
+  var valorPaginas = parseFloat(document.getElementById('fc-calc-val-pag').value) || 0;
+  var valorExcedente = parseFloat(document.getElementById('fc-calc-val-exc').value) || 0;
+
+  var btn = document.getElementById('fc-btn-confirmar');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  var payload = {
+    contrato_id: c.id,
+    equipamento_id: null,
+    mes_referencia: mes + '-01',
+    contador_pb_anterior: pbAnt,
+    contador_pb_atual: pbAtual,
+    contador_color_anterior: colorAnt,
+    contador_color_atual: colorAtual,
+    franquia_usada: Math.min(c.franquia_paginas || 0, pagPb + pagColor),
+    franquia_excedente: excessPages + rolloverUsado,
+    rollover_credito_usado: rolloverUsado,
+    valor_fixo: valorFixo,
+    valor_paginas: valorPaginas,
+    valor_excedente: valorExcedente,
+    valor_total: total,
+    observacao: obs || null,
+    boleto_gerado: gerarBoleto
+  };
+
+  var r = await sf('/rest/v1/fechamentos_mensais', {
+    method: 'POST',
+    headers: { 'Prefer': 'return=minimal' },
+    body: JSON.stringify(payload)
+  });
+  if (!r.ok) {
+    btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Confirmar e Gerar Boleto';
+    alert('Erro ao salvar fechamento: ' + JSON.stringify(r.data));
+    return;
+  }
+
+  var hoje = new Date();
+
+  // Atualizar rollover — usar créditos mais antigos
+  if (c.tipo_contrato === 'locacao' && c.rollover_ativo && rolloverUsado > 0) {
+    var rv = await sf('/rest/v1/rollover_creditos?contrato_id=eq.' + c.id + '&expirado=eq.false&validade=gte.' + hoje.toISOString().slice(0,10) + '&select=*&order=validade.asc');
+    var creditos = rv.data || [];
+    var restUsado = rolloverUsado;
+    for (var i = 0; i < creditos.length && restUsado > 0; i++) {
+      var cr = creditos[i];
+      var disp = cr.paginas_credito - cr.paginas_usadas;
+      var usar = Math.min(disp, restUsado);
+      var novoUsado = cr.paginas_usadas + usar;
+      await sf('/rest/v1/rollover_creditos?id=eq.' + cr.id, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ paginas_usadas: novoUsado, expirado: novoUsado >= cr.paginas_credito })
+      });
+      restUsado -= usar;
+    }
+  }
+
+  // Criar crédito de rollover se houve sobra
+  if (c.tipo_contrato === 'locacao' && c.rollover_ativo && sobraPages > 0) {
+    var validade = new Date(hoje);
+    validade.setDate(validade.getDate() + 90);
+    await sf('/rest/v1/rollover_creditos', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        contrato_id: c.id,
+        mes_origem: mes + '-01',
+        paginas_credito: sobraPages,
+        paginas_usadas: 0,
+        validade: validade.toISOString().slice(0, 10),
+        expirado: false
+      })
+    });
+  }
+
+  // Gerar boleto
+  if (gerarBoleto && total > 0) {
+    var mesDate = new Date(mes + '-01T12:00:00');
+    var nomeMes = mesDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    var diaVenc = c.dia_vencimento || 10;
+    var vencDate = new Date(mes + '-01T12:00:00');
+    vencDate.setMonth(vencDate.getMonth() + 1);
+    vencDate.setDate(diaVenc);
+    await sf('/rest/v1/boletos', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        cliente_id: c.cliente_id,
+        contrato_id: c.id,
+        descricao: 'Fechamento ' + nomeMes + ' — ' + (c.numero || ''),
+        valor: total,
+        vencimento: vencDate.toISOString().slice(0, 10),
+        status: 'a_vencer'
+      })
+    });
+  }
+
+  registrarLog('fechamento_mensal_criado', { contrato_id: c.id, mes, total });
+  fecharModal('modal-fechamento-mensal');
+  await fcCarregarFechamentos(c.id);
+  btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Confirmar e Gerar Boleto';
 }

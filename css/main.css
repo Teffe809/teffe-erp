@@ -220,3 +220,10 @@ body{font-family:var(--font);background:var(--bg);color:#1a1a2e;font-size:14px;}
   .kanban-wrap{flex-direction:column;}
   .kanban-col{min-width:unset;}
 }
+
+/* ── BUSCA DE CLIENTE NO CONTRATO ── */
+.mc-busca-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #F3F4F6;transition:background .15s;}
+.mc-busca-item:last-child{border-bottom:none;}
+.mc-busca-item:hover{background:#EFF6FF;}
+.mc-busca-nome{display:block;font-size:13px;font-weight:600;color:#111827;}
+.mc-busca-sub{display:block;font-size:11px;color:#6B7280;margin-top:1px;}

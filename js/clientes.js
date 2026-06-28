@@ -16,11 +16,11 @@ async function carregarClientes() {
       ? '<span class="badge badge-ativo">Ativo</span>'
       : '<span class="badge badge-encerrado">Inativo</span>';
     return '<tr>' +
+      '<td><strong style="font-family:monospace">' + _esc(c.codigo || '—') + '</strong></td>' +
       '<td><strong>' + _esc(c.razao_social) + '</strong></td>' +
       '<td>' + _esc(c.fantasia || '—') + '</td>' +
       '<td>' + _esc(c.cnpj || '—') + '</td>' +
       '<td>' + _esc(c.telefone || '—') + '</td>' +
-      '<td>' + _esc(c.email || '—') + '</td>' +
       '<td>' + badge + '</td>' +
       '<td>' +
         '<button class="btn-icon" title="Usuários de Acesso" onclick="abrirModalUsuariosCliente(\'' + c.id + '\',\'' + _esc(c.razao_social).replace(/'/g,"&#39;") + '\')"><i class="ti ti-users" style="color:#3730A3"></i></button>' +
@@ -31,13 +31,18 @@ async function carregarClientes() {
   }).join('');
 
   wrap.innerHTML = '<table class="erp-table">' +
-    '<thead><tr><th>Razão Social</th><th>Fantasia</th><th>CNPJ</th><th>Telefone</th><th>E-mail</th><th>Status</th><th></th></tr></thead>' +
+    '<thead><tr><th>Código</th><th>Razão Social</th><th>Fantasia</th><th>CNPJ</th><th>Telefone</th><th>Status</th><th></th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>';
 }
 
 async function abrirModalCliente(c) {
   document.getElementById('mcli-id').value = c ? c.id : '';
   document.getElementById('mcli-titulo').textContent = c ? 'Editar Cliente' : 'Novo Cliente';
+  var codigoEl = document.getElementById('mcli-codigo');
+  if (codigoEl) {
+    codigoEl.value = c ? (c.codigo || '') : '';
+    codigoEl.closest('.fg').style.display = c && c.codigo ? 'block' : 'none';
+  }
   document.getElementById('mcli-razao').value = c ? (c.razao_social || '') : '';
   document.getElementById('mcli-fantasia').value = c ? (c.fantasia || '') : '';
   document.getElementById('mcli-cnpj').value = c ? (c.cnpj || '') : '';
@@ -100,9 +105,19 @@ async function salvarCliente() {
   if (id) {
     res = await sf('/rest/v1/clientes?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(payload) });
   } else {
-    res = await sf('/rest/v1/clientes', { method: 'POST', body: JSON.stringify(payload), headers: { 'Prefer': 'return=minimal' } });
+    res = await sf('/rest/v1/clientes', { method: 'POST', body: JSON.stringify(payload), headers: { 'Prefer': 'return=representation' } });
   }
   if (!res.ok) { alert('Erro ao salvar: ' + JSON.stringify(res.data)); return; }
+
+  // Exibe código gerado automaticamente para novos clientes
+  if (!id && Array.isArray(res.data) && res.data[0] && res.data[0].codigo) {
+    const codigoEl = document.getElementById('mcli-codigo');
+    if (codigoEl) {
+      codigoEl.value = res.data[0].codigo;
+      codigoEl.closest('.fg').style.display = 'block';
+    }
+  }
+
   registrarLog(id ? 'cliente_editado' : 'cliente_criado', { razao_social: razao, id: id || undefined });
   fecharModal('modal-cliente');
   carregarClientes();

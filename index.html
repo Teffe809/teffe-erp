@@ -360,7 +360,7 @@
 
 <!-- ══════════════════════ MODAL EQUIPAMENTO ══════════════════════ -->
 <div class="modal-overlay" id="modal-equipamento" onclick="if(event.target===this)fecharModal('modal-equipamento')">
-  <div class="modal-box" style="width:560px;">
+  <div class="modal-box" style="width:580px;">
     <div class="modal-header">
       <h2 id="meq-titulo">Novo Equipamento</h2>
       <button class="modal-close" onclick="fecharModal('modal-equipamento')">✕</button>
@@ -368,15 +368,22 @@
     <div class="modal-body">
       <input type="hidden" id="meq-id"/>
       <div class="modal-grid-2">
-        <div class="fg"><label>Serial *</label><input id="meq-serial" type="text" placeholder="Nº de série do fabricante"/></div>
-        <div class="fg"><label>Código Teffe</label><input id="meq-codigo" type="text" placeholder="Ex: AWI3"/></div>
+        <div class="fg"><label>Código Teffe</label><input id="meq-codigo-teffe" type="text" readonly placeholder="Gerado automaticamente" style="background:#F9FAFB;color:#6B7280;font-family:monospace"/></div>
+        <div class="fg"><label>Serial</label><input id="meq-serial" type="text" placeholder="Nº de série do fabricante"/></div>
       </div>
       <div class="modal-grid-2">
         <div class="fg"><label>Marca *</label><input id="meq-marca" type="text" placeholder="HP, Canon, Epson..."/></div>
         <div class="fg"><label>Modelo *</label><input id="meq-modelo" type="text" placeholder="LaserJet Pro M428fdn"/></div>
       </div>
-      <div class="fg"><label>Cliente</label>
-        <select id="meq-cliente"><option value="">Selecione o cliente...</option></select>
+      <div class="fg"><label>Fornecedor</label>
+        <select id="meq-fornecedor"><option value="">— Sem fornecedor —</option></select>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Data de Compra</label><input id="meq-data-compra" type="date" oninput="meqAtualizarVencimentoGarantia()"/></div>
+        <div class="fg"><label>Garantia (dias)</label><input id="meq-garantia-dias" type="number" min="0" placeholder="365" oninput="meqAtualizarVencimentoGarantia()"/></div>
+      </div>
+      <div class="fg" id="meq-garantia-vence-wrap" style="display:none;margin-top:-8px;margin-bottom:4px">
+        <span id="meq-garantia-vence" style="font-size:13px;color:#16A34A;font-weight:600"></span>
       </div>
       <div class="modal-grid-2">
         <div class="fg"><label>Tipo de Impressão</label>
@@ -393,11 +400,15 @@
         </div>
         <div class="fg"><label>Status</label>
           <select id="meq-status">
-            <option value="ativo">Ativo</option>
-            <option value="em_manutencao">Em manutenção</option>
-            <option value="inativo">Inativo</option>
+            <option value="disponivel">Disponível</option>
+            <option value="instalado">Instalado</option>
+            <option value="manutencao">Em manutenção</option>
           </select>
         </div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Localização</label><input id="meq-localizacao" type="text" placeholder="Ex: Sala 3, Recepção..."/></div>
+        <div class="fg"><label>Último Contador</label><input id="meq-ultimo-contador" type="number" min="0" value="0"/></div>
       </div>
       <div class="fg"><label>Observações</label><textarea id="meq-obs" placeholder="Informações adicionais..." rows="2"></textarea></div>
     </div>
@@ -448,7 +459,20 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="mc-id"/>
-      <div class="fg"><label>Cliente *</label><select id="mc-cliente"><option value="">Selecione o cliente...</option></select></div>
+      <input type="hidden" id="mc-cliente"/>
+      <div class="fg">
+        <label>Cliente *</label>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <select id="mc-busca-tipo" style="width:150px;flex-shrink:0">
+            <option value="nome">Por Nome</option>
+            <option value="cnpj">Por CNPJ</option>
+            <option value="codigo">Por Código</option>
+          </select>
+          <input id="mc-busca-cli" type="text" placeholder="Digite para buscar..." style="flex:1" oninput="mcBuscarClienteDebounce()"/>
+        </div>
+        <div id="mc-busca-resultado" style="display:none;border:1px solid #E5E7EB;border-radius:8px;max-height:160px;overflow-y:auto;"></div>
+        <div id="mc-cliente-selecionado" style="display:none;padding:8px 12px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;font-size:13px;"></div>
+      </div>
       <div class="modal-grid-2">
         <div class="fg"><label>Número do contrato</label><input id="mc-numero" type="text" placeholder="CT-001"/></div>
         <div class="fg"><label>Status</label>
@@ -500,6 +524,15 @@
       </div>
       <div class="fg"><label>Contrato PDF assinado</label><input id="mc-arquivo" type="file" accept=".pdf" style="padding:4px"/></div>
       <div class="fg"><label>Observação</label><textarea id="mc-obs" placeholder="Observações..."></textarea></div>
+
+      <div style="border-top:1px solid #E5E7EB;margin-top:16px;padding-top:16px">
+        <label style="font-weight:600;font-size:14px;display:block;margin-bottom:8px">Equipamentos do Contrato</label>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input id="mc-equip-busca" type="text" placeholder="Buscar por Código Teffe ou Serial..." style="flex:1" oninput="mcBuscarEquipamento()"/>
+        </div>
+        <div id="mc-equip-resultado"></div>
+        <div id="mc-equip-lista" style="margin-top:6px"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-contrato')">Cancelar</button>
@@ -692,6 +725,10 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="mcli-id"/>
+      <div class="fg" style="display:none">
+        <label>Código do Cliente</label>
+        <input id="mcli-codigo" type="text" readonly style="background:#F9FAFB;color:#16A34A;font-family:monospace;font-weight:700;width:120px"/>
+      </div>
       <div class="modal-grid-2">
         <div class="fg"><label>Razão Social *</label><input id="mcli-razao" type="text" placeholder="Razão Social"/></div>
         <div class="fg"><label>Nome Fantasia</label><input id="mcli-fantasia" type="text" placeholder="Fantasia"/></div>

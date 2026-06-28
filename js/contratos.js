@@ -56,8 +56,10 @@ async function carregarContratos() {
     '<tbody>' + rows + '</tbody></table>';
 }
 
+// Estado dos equipamentos do contrato em edição
+var _mcEquipamentos = []; // [{id, codigo_teffe, marca, modelo, serial}]
+
 async function abrirModalContrato(c) {
-  // Preenche campos estáticos primeiro
   document.getElementById('mc-id').value = c ? c.id : '';
   document.getElementById('mc-titulo').textContent = c ? 'Editar Contrato' : 'Novo Contrato';
   document.getElementById('mc-numero').value = c ? (c.numero || '') : '';
@@ -81,14 +83,151 @@ async function abrirModalContrato(c) {
     var el = document.getElementById(elId);
     if (el) el.checked = true;
   });
-  // Carrega clientes no select (garante abertura do modal mesmo se falhar)
-  try {
-    await _carregarClientesSelect('mc-cliente');
-    if (c && c.cliente_id) document.getElementById('mc-cliente').value = c.cliente_id;
-  } catch(e) {
-    console.warn('[Contratos] falha ao carregar clientes:', e);
+
+  // Busca de cliente — exibe cliente selecionado se editando
+  _mcEquipamentos = [];
+  mcLimparBuscaCliente();
+  if (c && c.cliente_id) {
+    // Carrega dados do cliente para exibir nome
+    try {
+      var cr = await sf('/rest/v1/clientes?id=eq.' + c.cliente_id + '&select=id,razao_social,cnpj,codigo');
+      if (cr.data && cr.data[0]) mcDefinirCliente(cr.data[0], false);
+    } catch(e) { console.warn('[Contratos] erro ao carregar cliente:', e); }
+    // Carrega equipamentos vinculados
+    try {
+      var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + c.id + '&select=*,equipamentos(*)');
+      _mcEquipamentos = (er.data || []).filter(function(v){ return !!v.equipamentos; }).map(function(v){ return v.equipamentos; });
+    } catch(e) { console.warn('[Contratos] erro ao carregar equipamentos:', e); }
   }
+  document.getElementById('mc-equip-busca').value = '';
+  document.getElementById('mc-equip-resultado').innerHTML = '';
+  mcRenderEquipamentosLista();
+
   document.getElementById('modal-contrato').classList.add('open');
+}
+
+function mcLimparBuscaCliente() {
+  document.getElementById('mc-cliente').value = '';
+  document.getElementById('mc-busca-cli').value = '';
+  document.getElementById('mc-busca-resultado').style.display = 'none';
+  document.getElementById('mc-busca-resultado').innerHTML = '';
+  document.getElementById('mc-cliente-selecionado').style.display = 'none';
+  document.getElementById('mc-cliente-selecionado').innerHTML = '';
+}
+
+function mcDefinirCliente(c, mostrarBadge) {
+  if (mostrarBadge === undefined) mostrarBadge = true;
+  document.getElementById('mc-cliente').value = c.id;
+  document.getElementById('mc-busca-resultado').style.display = 'none';
+  document.getElementById('mc-busca-resultado').innerHTML = '';
+  if (mostrarBadge) document.getElementById('mc-busca-cli').value = '';
+  var sel = document.getElementById('mc-cliente-selecionado');
+  sel.style.display = 'block';
+  sel.innerHTML = '<i class="ti ti-check" style="color:#16A34A"></i> <strong>' + _esc(c.razao_social) + '</strong>' +
+    (c.codigo ? ' <span style="font-family:monospace;background:#E5E7EB;padding:1px 5px;border-radius:4px">' + _esc(c.codigo) + '</span>' : '') +
+    (c.cnpj ? '<span style="color:#6B7280;margin-left:8px">' + _esc(c.cnpj) + '</span>' : '') +
+    ' <button type="button" onclick="mcLimparBuscaCliente()" style="background:none;border:none;cursor:pointer;color:#DC2626;margin-left:8px;font-size:13px">Trocar</button>';
+}
+
+var _mcBuscaTimer = null;
+function mcBuscarClienteDebounce() {
+  clearTimeout(_mcBuscaTimer);
+  _mcBuscaTimer = setTimeout(mcBuscarCliente, 300);
+}
+
+async function mcBuscarCliente() {
+  var busca = document.getElementById('mc-busca-cli').value.trim();
+  var tipo  = document.getElementById('mc-busca-tipo').value;
+  var resEl = document.getElementById('mc-busca-resultado');
+  if (!busca) { resEl.style.display = 'none'; return; }
+
+  resEl.innerHTML = '<div style="color:#6B7280;padding:6px 0">Buscando...</div>';
+  resEl.style.display = 'block';
+
+  var q = '/rest/v1/clientes?select=id,razao_social,cnpj,codigo&order=razao_social.asc&limit=8';
+  var enc = encodeURIComponent(busca);
+  if (tipo === 'nome')   q += '&razao_social=ilike.*' + enc + '*';
+  else if (tipo === 'cnpj')   q += '&cnpj=ilike.*' + enc + '*';
+  else if (tipo === 'codigo') q += '&codigo=ilike.*' + enc + '*';
+
+  try {
+    var { data } = await sf(q);
+    if (!data || !data.length) {
+      resEl.innerHTML = '<div style="color:#6B7280;padding:6px 0">Nenhum cliente encontrado.</div>';
+      return;
+    }
+    resEl.innerHTML = data.map(function(c) {
+      return '<div class="mc-busca-item" onclick=\'mcDefinirCliente(' + JSON.stringify(c) + ')\'>' +
+        '<span class="mc-busca-nome">' + _esc(c.razao_social) + '</span>' +
+        '<span class="mc-busca-sub">' + (c.codigo ? 'Cód: ' + c.codigo : '') + (c.cnpj ? ' · CNPJ: ' + c.cnpj : '') + '</span>' +
+        '</div>';
+    }).join('');
+  } catch(e) {
+    resEl.innerHTML = '<div style="color:#DC2626;padding:6px 0">Erro ao buscar clientes.</div>';
+  }
+}
+
+async function mcBuscarEquipamento() {
+  var busca = document.getElementById('mc-equip-busca').value.trim().toUpperCase();
+  var resEl = document.getElementById('mc-equip-resultado');
+  if (!busca) { resEl.innerHTML = ''; return; }
+
+  var enc = encodeURIComponent(busca);
+  var q = '/rest/v1/equipamentos?select=*&or=(codigo_teffe.ilike.*' + enc + '*,serial.ilike.*' + enc + '*)&limit=5&status=neq.manutencao';
+
+  try {
+    var { data } = await sf(q);
+    if (!data || !data.length) {
+      resEl.innerHTML = '<div style="color:#6B7280;font-size:13px;padding:4px 0">Nenhum equipamento encontrado.</div>';
+      return;
+    }
+    resEl.innerHTML = data.map(function(e) {
+      var jaAdicionado = _mcEquipamentos.some(function(x){ return x.id === e.id; });
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;margin-top:4px">' +
+        '<div>' +
+          '<strong>' + _esc(e.marca || '') + ' ' + _esc(e.modelo || '') + '</strong>' +
+          '<span style="font-size:12px;color:#6B7280;margin-left:8px">Serial: ' + _esc(e.serial || '—') + ' · Teffe: ' + _esc(e.codigo_teffe || '—') + '</span>' +
+        '</div>' +
+        (jaAdicionado
+          ? '<span style="font-size:12px;color:#16A34A">Já adicionado</span>'
+          : '<button type="button" class="btn-primary" style="padding:4px 12px;font-size:12px" onclick=\'mcAdicionarEquipamento(' + JSON.stringify(e) + ')\'>Adicionar</button>'
+        ) +
+      '</div>';
+    }).join('');
+  } catch(err) {
+    resEl.innerHTML = '<div style="color:#DC2626;font-size:13px">Erro ao buscar equipamentos.</div>';
+  }
+}
+
+function mcAdicionarEquipamento(e) {
+  if (_mcEquipamentos.some(function(x){ return x.id === e.id; })) return;
+  _mcEquipamentos.push(e);
+  document.getElementById('mc-equip-busca').value = '';
+  document.getElementById('mc-equip-resultado').innerHTML = '';
+  mcRenderEquipamentosLista();
+}
+
+function mcRemoverEquipamento(equipId) {
+  _mcEquipamentos = _mcEquipamentos.filter(function(x){ return x.id !== equipId; });
+  mcRenderEquipamentosLista();
+}
+
+function mcRenderEquipamentosLista() {
+  var el = document.getElementById('mc-equip-lista');
+  if (!el) return;
+  if (!_mcEquipamentos.length) {
+    el.innerHTML = '<div style="color:#9CA3AF;font-size:13px;padding:4px 0">Nenhum equipamento vinculado.</div>';
+    return;
+  }
+  el.innerHTML = _mcEquipamentos.map(function(e) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;margin-top:4px">' +
+      '<div>' +
+        '<strong>' + _esc(e.marca || '') + ' ' + _esc(e.modelo || '') + '</strong>' +
+        '<span style="font-size:12px;color:#6B7280;margin-left:8px">Serial: ' + _esc(e.serial || '—') + ' · Teffe: ' + _esc(e.codigo_teffe || '—') + '</span>' +
+      '</div>' +
+      '<button type="button" class="btn-icon" style="color:#DC2626" title="Remover" onclick="mcRemoverEquipamento(\'' + e.id + '\')"><i class="ti ti-trash"></i></button>' +
+    '</div>';
+  }).join('');
 }
 
 function calcularFimContrato() {
@@ -165,18 +304,20 @@ async function salvarContrato() {
   }
   if (!res.ok) { alert('Erro ao salvar contrato: ' + JSON.stringify(res.data)); return; }
 
+  var contratoIdFinal = id || null;
   if (!id) {
-    // Busca o ID do contrato recém criado pelo numero (mais confiável que return=representation)
+    // Busca o ID do contrato recém criado (uma única query reutilizada para parcelas + equipamentos)
     const q = await sf('/rest/v1/contratos?numero=eq.' + encodeURIComponent(numero) + '&select=id&order=created_at.desc&limit=1');
-    const contratoId = Array.isArray(q.data) && q.data[0] ? q.data[0].id : null;
-    console.log('[salvarContrato] contratoId:', contratoId, '| numero:', numero, '| q.data:', q.data);
-    if (contratoId) {
-      await _gerarParcelas(contratoId, clienteId, inicio, duracao, diaVenc, valor, numero);
+    contratoIdFinal = Array.isArray(q.data) && q.data[0] ? q.data[0].id : null;
+    console.log('[salvarContrato] contratoId:', contratoIdFinal, '| numero:', numero);
+    if (contratoIdFinal) {
+      await _gerarParcelas(contratoIdFinal, clienteId, inicio, duracao, diaVenc, valor, numero);
     } else {
       console.error('[salvarContrato] contratoId não encontrado — parcelas NÃO geradas. q:', q);
       alert('Contrato salvo, mas não foi possível gerar as parcelas. Verifique o console.');
     }
   }
+  if (contratoIdFinal) await _sincronizarEquipamentosContrato(contratoIdFinal, numero);
 
   registrarLog(id ? 'contrato_editado' : 'contrato_criado', { numero, cliente_id: clienteId });
   fecharModal('modal-contrato');
@@ -253,4 +394,44 @@ function _cStatusLabel(s) {
 
 function _mesAno(d) {
   return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+}
+
+async function _sincronizarEquipamentosContrato(contratoId, numero) {
+  if (!_mcEquipamentos.length) return;
+
+  // Carrega vínculos existentes para saber o que adicionar/remover
+  var existentes = [];
+  try {
+    var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + contratoId + '&select=equipamento_id');
+    existentes = (er.data || []).map(function(v){ return v.equipamento_id; });
+  } catch(e) { console.warn('[_sincronizarEquipamentosContrato] erro ao carregar existentes:', e); }
+
+  var novosIds = _mcEquipamentos.map(function(e){ return e.id; });
+
+  // Adicionar novos
+  var paraBuscarEmail = null;
+  try {
+    var sess = await _supabase.auth.getSession();
+    paraBuscarEmail = sess && sess.data && sess.data.session ? sess.data.session.user.email : null;
+  } catch(e) {}
+
+  for (var i = 0; i < _mcEquipamentos.length; i++) {
+    var eq = _mcEquipamentos[i];
+    if (existentes.includes(eq.id)) continue;
+    await sf('/rest/v1/contrato_equipamentos', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ contrato_id: contratoId, equipamento_id: eq.id, adicionado_por: paraBuscarEmail })
+    });
+    registrarLog('equipamento_adicionado', { contrato_id: contratoId, equipamento_id: eq.id, modelo: eq.modelo, serial: eq.serial, numero });
+  }
+
+  // Remover os que saíram da lista
+  for (var j = 0; j < existentes.length; j++) {
+    var exId = existentes[j];
+    if (novosIds.includes(exId)) continue;
+    await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + contratoId + '&equipamento_id=eq.' + exId, { method: 'DELETE' });
+    var eq2 = _mcEquipamentos.find(function(x){ return x.id === exId; }) || { id: exId };
+    registrarLog('equipamento_removido', { contrato_id: contratoId, equipamento_id: exId, numero });
+  }
 }

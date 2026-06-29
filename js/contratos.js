@@ -577,6 +577,7 @@ async function fcCarregarFechamentos(contratoId) {
   var r = await sf('/rest/v1/fechamentos_mensais?contrato_id=eq.' + contratoId + '&select=*&order=mes_referencia.desc');
   var rows = Array.isArray(r.data) ? r.data : [];
   _fcFechamentosData = rows;
+  console.log('[fcCarregarFechamentos] rows:', rows.length, '| _fcContratoAtual:', _fcContratoAtual && _fcContratoAtual.id);
   if (!rows.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum fechamento registrado. Clique em "+ Novo Fechamento" para começar.</div>'; return; }
   var html = '<table class="erp-table"><thead><tr><th>Mês</th><th>Págs PB</th><th>Págs Color</th><th>Valor Fixo</th><th>Excedente</th><th>Total</th><th>Boleto</th><th></th></tr></thead><tbody>';
   rows.forEach(function(f, idx) {
@@ -753,13 +754,20 @@ function _abrirExtratoFechamento(f, c, clienteNome, clienteCidade, equips) {
 
 async function fcAbrirNovoFechamento() {
   var c = _fcContratoAtual;
-  if (!c) return;
+  if (!c || !c.id) return;
+
+  // Re-fetch para garantir dados frescos (contador_inicial_pb pode estar stale no onclick cache)
+  var cRes = await sf('/rest/v1/contratos?id=eq.' + c.id + '&select=*&limit=1');
+  if (cRes.data && cRes.data[0]) { c = cRes.data[0]; _fcContratoAtual = c; }
 
   // Último fechamento para pegar contadores anteriores
   var r = await sf('/rest/v1/fechamentos_mensais?contrato_id=eq.' + c.id + '&select=*&order=mes_referencia.desc&limit=1');
   var ultimo = r.data && r.data[0] ? r.data[0] : null;
-  var pbAnt = ultimo ? ultimo.contador_pb_atual : (c.contador_inicial_pb || 0);
-  var colorAnt = ultimo ? ultimo.contador_color_atual : (c.contador_inicial_color || 0);
+  var pbAnt = ultimo ? ultimo.contador_pb_atual : (c.contador_inicial_pb != null ? c.contador_inicial_pb : 0);
+  var colorAnt = ultimo ? ultimo.contador_color_atual : (c.contador_inicial_color != null ? c.contador_inicial_color : 0);
+  console.log('[fcAbrirNovoFechamento] ultimo:', ultimo ? 'sim (id=' + ultimo.id + ')' : 'nenhum',
+    '| contador_inicial_pb:', c.contador_inicial_pb, '| pbAnt usado:', pbAnt,
+    '| contador_inicial_color:', c.contador_inicial_color, '| colorAnt usado:', colorAnt);
 
   // Equipamentos do contrato (informativo)
   var equips = [];
@@ -830,8 +838,10 @@ async function fcCalcular() {
   var c = _fcContratoAtual;
   if (!c) return;
 
-  var pbAnt = parseInt(document.getElementById('fc-cont-pb-ant-val').value) || 0;
-  var colorAnt = parseInt(document.getElementById('fc-cont-color-ant-val').value) || 0;
+  var pbAntRaw = parseInt(document.getElementById('fc-cont-pb-ant-val').value);
+  var colorAntRaw = parseInt(document.getElementById('fc-cont-color-ant-val').value);
+  var pbAnt = isNaN(pbAntRaw) ? 0 : pbAntRaw;
+  var colorAnt = isNaN(colorAntRaw) ? 0 : colorAntRaw;
   var pbAtual = parseInt(document.getElementById('fc-cont-pb').value);
   var colorAtual = parseInt(document.getElementById('fc-cont-color').value);
   var resumoEl = document.getElementById('fc-resumo');
@@ -935,8 +945,10 @@ async function fcSalvarFechamento() {
   if (!c) return;
 
   var mes = document.getElementById('fc-mes').value;
-  var pbAnt = parseInt(document.getElementById('fc-cont-pb-ant-val').value) || 0;
-  var colorAnt = parseInt(document.getElementById('fc-cont-color-ant-val').value) || 0;
+  var pbAntRaw = parseInt(document.getElementById('fc-cont-pb-ant-val').value);
+  var colorAntRaw = parseInt(document.getElementById('fc-cont-color-ant-val').value);
+  var pbAnt = isNaN(pbAntRaw) ? 0 : pbAntRaw;
+  var colorAnt = isNaN(colorAntRaw) ? 0 : colorAntRaw;
   var pbAtual = parseInt(document.getElementById('fc-cont-pb').value);
   var colorAtual = parseInt(document.getElementById('fc-cont-color').value);
   var totalStr = document.getElementById('fc-calc-total').value;
@@ -1054,7 +1066,9 @@ async function fcSalvarFechamento() {
   }
 
   registrarLog('fechamento_mensal_criado', { contrato_id: c.id, mes, total });
+  console.log('[fcSalvarFechamento] salvo OK | contrato:', c.id, '| recarregando fechamentos...');
   fecharModal('modal-fechamento-mensal');
   await fcCarregarFechamentos(c.id);
+  console.log('[fcSalvarFechamento] _fcFechamentosData após reload:', _fcFechamentosData.length, 'rows');
   btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Confirmar e Gerar Boleto';
 }

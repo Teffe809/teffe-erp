@@ -10,6 +10,7 @@
 ═══════════════════════════════════════════════════════ */
 
 var _fcContratoAtual = null;
+var _fcFechamentosData = [];
 
 async function carregarContratos() {
   const wrap = document.querySelector('#view-contratos .table-wrap');
@@ -575,9 +576,10 @@ async function fcCarregarFechamentos(contratoId) {
   wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
   var r = await sf('/rest/v1/fechamentos_mensais?contrato_id=eq.' + contratoId + '&select=*&order=mes_referencia.desc');
   var rows = Array.isArray(r.data) ? r.data : [];
+  _fcFechamentosData = rows;
   if (!rows.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum fechamento registrado. Clique em "+ Novo Fechamento" para começar.</div>'; return; }
-  var html = '<table class="erp-table"><thead><tr><th>Mês</th><th>Págs PB</th><th>Págs Color</th><th>Valor Fixo</th><th>Excedente</th><th>Total</th><th>Boleto</th></tr></thead><tbody>';
-  rows.forEach(function(f) {
+  var html = '<table class="erp-table"><thead><tr><th>Mês</th><th>Págs PB</th><th>Págs Color</th><th>Valor Fixo</th><th>Excedente</th><th>Total</th><th>Boleto</th><th></th></tr></thead><tbody>';
+  rows.forEach(function(f, idx) {
     var mesLabel = f.mes_referencia ? new Date(f.mes_referencia + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : '—';
     var total = 'R$ ' + Number(f.valor_total || 0).toFixed(2).replace('.', ',');
     var boletoSt = f.boleto_gerado
@@ -586,10 +588,167 @@ async function fcCarregarFechamentos(contratoId) {
     html += '<tr><td><strong>' + mesLabel + '</strong></td><td>' + (f.paginas_pb || 0) + '</td><td>' + (f.paginas_color || 0) + '</td>' +
       '<td>R$ ' + Number(f.valor_fixo || 0).toFixed(2).replace('.', ',') + '</td>' +
       '<td>R$ ' + Number(f.valor_excedente || 0).toFixed(2).replace('.', ',') + '</td>' +
-      '<td><strong>' + total + '</strong></td><td>' + boletoSt + '</td></tr>';
+      '<td><strong>' + total + '</strong></td><td>' + boletoSt + '</td>' +
+      '<td><button class="btn-icon" title="Extrato PDF" onclick="fcImprimirExtrato(' + idx + ')"><i class="ti ti-file-text" style="color:#1D4ED8"></i></button></td></tr>';
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
+}
+
+async function fcImprimirExtrato(idx) {
+  var f = _fcFechamentosData[idx];
+  var c = _fcContratoAtual;
+  if (!f || !c) { alert('Dados do fechamento não encontrados.'); return; }
+
+  var clienteNome = '—', clienteCidade = '';
+  try {
+    var cr = await sf('/rest/v1/clientes?id=eq.' + c.cliente_id + '&select=razao_social,cidade&limit=1');
+    if (cr.data && cr.data[0]) { clienteNome = cr.data[0].razao_social || '—'; clienteCidade = cr.data[0].cidade || ''; }
+  } catch(e) {}
+
+  var equips = [];
+  try {
+    var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + c.id + '&select=equipamento_id');
+    var eqIds = (er.data || []).map(function(v){ return v.equipamento_id; }).filter(Boolean);
+    if (eqIds.length) {
+      var eqRes = await sf('/rest/v1/equipamentos?id=in.(' + eqIds.join(',') + ')&select=id,marca,modelo,serial,codigo_teffe');
+      equips = Array.isArray(eqRes.data) ? eqRes.data : [];
+    }
+  } catch(e) {}
+
+  _abrirExtratoFechamento(f, c, clienteNome, clienteCidade, equips);
+}
+
+function _abrirExtratoFechamento(f, c, clienteNome, clienteCidade, equips) {
+  var esc = function(v) { return (v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var fmt = function(v) { return Number(v || 0).toFixed(2).replace('.', ','); };
+
+  var mesDate = f.mes_referencia ? new Date(f.mes_referencia + 'T12:00:00') : new Date();
+  var mesLabel = mesDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  var mesUpper = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+
+  var diaVenc = c.dia_vencimento || 10;
+  var mp = (f.mes_referencia || '').split('-');
+  var vencDate = new Date(parseInt(mp[0]), parseInt(mp[1] || 1), diaVenc);
+  var vencFmt = vencDate.toLocaleDateString('pt-BR');
+
+  var tipoLabel = { manutencao:'MANUTENÇÃO', locacao:'LOCAÇÃO', avulso:'AVULSO' }[c.tipo_contrato] || (c.tipo_contrato||'').toUpperCase();
+  var isManutencao = c.tipo_contrato === 'manutencao';
+
+  var pagPb = (f.contador_pb_atual || 0) - (f.contador_pb_anterior || 0);
+  var pagColor = (f.contador_color_atual || 0) - (f.contador_color_anterior || 0);
+  var valUnitPb = Number(c.valor_pagina_pb || 0);
+  var valUnitColor = Number(c.valor_pagina_color || 0);
+  var totalPb = pagPb * valUnitPb;
+  var totalColor = pagColor * valUnitColor;
+  var valorFixo = Number(f.valor_fixo || 0);
+  var valorExcedente = Number(f.valor_excedente || 0);
+  var total = Number(f.valor_total || 0);
+
+  // Seção de equipamentos com tabela de contadores
+  var equipHtml = '';
+  if (equips.length === 0) {
+    equipHtml = '<div style="padding:20px;color:#666;font-size:13px">Nenhum equipamento vinculado.</div>';
+  } else {
+    equips.forEach(function(eq, i) {
+      equipHtml += '<div style="padding:20px;border-bottom:1px solid #eee;">' +
+        '<h3 style="color:#0A4B8D;border-bottom:1px solid #F87A13;padding-bottom:5px;margin:0 0 6px;font-size:14px;">EQUIPAMENTO: ' + esc((eq.marca||'') + ' ' + (eq.modelo||'')) + '</h3>' +
+        '<p style="color:#666;font-size:12px;margin:0 0 10px">Serial: ' + esc(eq.serial||'—') + ' | Código Teffe: ' + esc(eq.codigo_teffe||'—') + '</p>';
+      if (i === 0) {
+        equipHtml +=
+          '<table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;">' +
+          '<thead><tr style="background:#0A4B8D;color:white;">' +
+            '<th style="padding:8px;text-align:left;">DESCRIÇÃO</th>' +
+            '<th style="padding:8px;text-align:right;">ANTERIOR</th>' +
+            '<th style="padding:8px;text-align:right;">ATUAL</th>' +
+            '<th style="padding:8px;text-align:right;">PÁGINAS</th>' +
+            '<th style="padding:8px;text-align:right;">VALOR UNIT.</th>' +
+            '<th style="padding:8px;text-align:right;">TOTAL</th>' +
+          '</tr></thead><tbody>' +
+          '<tr style="background:#f9f9f9;">' +
+            '<td style="padding:8px;border:1px solid #ddd;">Impressão PB</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + (f.contador_pb_anterior||0) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + (f.contador_pb_atual||0) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + pagPb + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">R$ ' + fmt(valUnitPb) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">R$ ' + fmt(totalPb) + '</td>' +
+          '</tr><tr>' +
+            '<td style="padding:8px;border:1px solid #ddd;">Impressão Colorida</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + (f.contador_color_anterior||0) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + (f.contador_color_atual||0) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + pagColor + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">R$ ' + fmt(valUnitColor) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">R$ ' + fmt(totalColor) + '</td>' +
+          '</tr></tbody></table>';
+      } else {
+        equipHtml += '<p style="font-size:12px;color:#888;">Contadores consolidados no equipamento principal.</p>';
+      }
+      equipHtml += '</div>';
+    });
+  }
+
+  // Resumo financeiro
+  var finHtml = '<div style="padding:20px;">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+    '<tr><td style="padding:8px;border:1px solid #eee;"><strong>Valor Fixo Mensal</strong></td>' +
+      '<td style="padding:8px;text-align:right;border:1px solid #eee;">R$ ' + fmt(valorFixo) + '</td></tr>';
+
+  if (isManutencao) {
+    finHtml += '<tr style="background:#f9f9f9;"><td style="padding:8px;border:1px solid #eee;"><strong>Valor Produção PB (' + pagPb + ' págs × R$ ' + fmt(valUnitPb) + ')</strong></td>' +
+      '<td style="padding:8px;text-align:right;border:1px solid #eee;">R$ ' + fmt(totalPb) + '</td></tr>' +
+      '<tr><td style="padding:8px;border:1px solid #eee;"><strong>Valor Produção Colorida (' + pagColor + ' págs × R$ ' + fmt(valUnitColor) + ')</strong></td>' +
+      '<td style="padding:8px;text-align:right;border:1px solid #eee;">R$ ' + fmt(totalColor) + '</td></tr>';
+  } else {
+    if (f.rollover_credito_usado > 0) {
+      finHtml += '<tr style="background:#EDE9FE;"><td style="padding:8px;border:1px solid #eee;"><strong>Rollover abatido</strong></td>' +
+        '<td style="padding:8px;text-align:right;border:1px solid #eee;color:#7C3AED;">−' + f.rollover_credito_usado + ' págs</td></tr>';
+    }
+    if (valorExcedente > 0) {
+      finHtml += '<tr style="background:#FEF2F2;"><td style="padding:8px;border:1px solid #eee;"><strong>Excedente</strong></td>' +
+        '<td style="padding:8px;text-align:right;border:1px solid #eee;color:#DC2626;">R$ ' + fmt(valorExcedente) + '</td></tr>';
+    }
+  }
+
+  finHtml +=
+    '<tr style="background:#0A4B8D;color:white;">' +
+      '<td style="padding:12px;border:1px solid #0A4B8D;"><strong>TOTAL A PAGAR</strong></td>' +
+      '<td style="padding:12px;text-align:right;font-size:18px;border:1px solid #0A4B8D;"><strong>R$ ' + fmt(total) + '</strong></td>' +
+    '</tr></table>' +
+    '<div style="margin-top:20px;padding:15px;background:#E8F0FB;border-left:4px solid #F87A13;border-radius:4px;">' +
+      '<p style="margin:0;color:#0A4B8D;"><strong>⚠️ Este extrato é meramente informativo.</strong></p>' +
+      '<p style="margin:5px 0 0;color:#666;font-size:12px;">O boleto bancário será enviado separadamente com vencimento em <strong>' + vencFmt + '</strong>.</p>' +
+    '</div></div>';
+
+  var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>' +
+    '<title>Extrato ' + esc(mesUpper) + ' — ' + esc(c.numero||'') + '</title>' +
+    '<style>*{box-sizing:border-box;}body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff;margin:0;padding:0;}' +
+    '@media print{.np{display:none!important;}@page{size:A4;margin:10mm;}}</style></head><body>' +
+    '<div class="np" style="display:flex;gap:10px;justify-content:flex-end;padding:12px 20px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;">' +
+      '<button onclick="window.close()" style="padding:8px 18px;border:1px solid #D1D5DB;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">Fechar</button>' +
+      '<button onclick="window.print()" style="padding:8px 22px;border:none;border-radius:6px;background:#0A4B8D;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">⎙ Imprimir / Salvar PDF</button>' +
+    '</div>' +
+    '<div style="background:#0A4B8D;padding:30px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<div><h1 style="color:white;margin:0;font-size:24px;font-weight:900;">TEFFE TECNOLOGIA</h1>' +
+      '<p style="color:#F87A13;margin:4px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:1px;">EXTRATO DE FECHAMENTO MENSAL</p></div>' +
+      '<div style="color:white;text-align:right;font-size:12px;line-height:1.9;"><p style="margin:0">contato@teffe.com.br</p><p style="margin:0">(14) 99828-9248</p><p style="margin:0">teffe.com.br</p></div>' +
+    '</div>' +
+    '<div style="padding:20px;border-bottom:2px solid #0A4B8D;">' +
+      '<h2 style="color:#0A4B8D;margin:0 0 12px;font-size:18px;">EXTRATO — ' + esc(mesUpper.toUpperCase()) + '</h2>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+        '<tr><td style="padding:5px 10px 5px 0;width:130px;color:#666;font-weight:700;">CLIENTE:</td><td style="padding:5px 0;">' + esc(clienteNome) + (clienteCidade ? ' — ' + esc(clienteCidade) : '') + '</td></tr>' +
+        '<tr><td style="padding:5px 10px 5px 0;color:#666;font-weight:700;">CONTRATO:</td><td style="padding:5px 0;"><strong>' + esc(c.numero||'—') + '</strong> | ' + tipoLabel + '</td></tr>' +
+        '<tr><td style="padding:5px 10px 5px 0;color:#666;font-weight:700;">PERÍODO:</td><td style="padding:5px 0;">' + esc(mesUpper) + '</td></tr>' +
+        '<tr><td style="padding:5px 10px 5px 0;color:#666;font-weight:700;">VENCIMENTO:</td><td style="padding:5px 0;"><strong>' + vencFmt + '</strong></td></tr>' +
+      '</table>' +
+    '</div>' +
+    equipHtml + finHtml +
+    '<div style="background:#0A4B8D;padding:15px;text-align:center;margin-top:30px;">' +
+      '<p style="color:white;margin:0;font-size:11px;">Teffe Tecnologia © 2026 | contato@teffe.com.br | (14) 99828-9248 | teffe.com.br</p>' +
+    '</div>' +
+    '<script>window.onload=function(){window.print();}<\/script></body></html>';
+
+  var w = window.open('', '_blank', 'width=960,height=860');
+  if (w) { w.document.open(); w.document.write(html); w.document.close(); }
 }
 
 async function fcAbrirNovoFechamento() {

@@ -370,24 +370,37 @@ async function salvarContrato() {
   carregarContratos();
 }
 
+function _fmtDateLocal(d) {
+  // Formata Date como YYYY-MM-DD usando hora local (evita problema de fuso com toISOString)
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 async function _gerarParcelas(contratoId, clienteId, inicio, duracao, diaVenc, valor, numero) {
-  const parcelas = [];
+  // Determina a primeira data de vencimento que NÃO está no passado:
+  // Se hoje já passou do dia de vencimento deste mês → primeira parcela no mês seguinte.
+  var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  var vencMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), diaVenc);
+  // baseMes: índice JS (0=Jan). Se hoje >= vencMesAtual, avança um mês.
+  var baseAno = hoje.getFullYear();
+  var baseMes = (hoje >= vencMesAtual) ? hoje.getMonth() + 1 : hoje.getMonth();
+
+  var parcelas = [];
   for (var i = 0; i < duracao; i++) {
-    var d = new Date(inicio + 'T12:00:00');
-    d.setMonth(d.getMonth() + i);
-    d.setDate(diaVenc);
-    var venc = d.toISOString().slice(0, 10);
+    // new Date(year, month, day) — month é 0-indexed; overflow de mês é tratado automaticamente
+    var vencDate = new Date(baseAno, baseMes + i, diaVenc);
     parcelas.push({
       contrato_id: contratoId,
       cliente_id: clienteId,
       descricao: 'Mensalidade ' + numero + ' - Mês ' + (i + 1) + '/' + duracao,
       valor: valor,
-      vencimento: venc,
+      vencimento: _fmtDateLocal(vencDate),
       status: 'pendente'
     });
   }
 
-  console.log('[_gerarParcelas] gerando', parcelas.length, 'parcelas para contrato', contratoId);
+  console.log('[_gerarParcelas] gerando', parcelas.length, 'parcelas para contrato', contratoId,
+    '| primeira:', parcelas[0] && parcelas[0].vencimento, '| última:', parcelas[parcelas.length-1] && parcelas[parcelas.length-1].vencimento);
+
   for (var j = 0; j < parcelas.length; j += 10) {
     var lote = parcelas.slice(j, j + 10);
     var res = await sf('/rest/v1/financeiro_receber', {
@@ -686,7 +699,8 @@ async function fcCalcular() {
     valorFixo = Number(c.valor_fixo || c.valor_mensal || 0);
     valorPaginas = (pagPb * Number(c.valor_pagina_pb || 0)) + (pagColor * Number(c.valor_pagina_color || 0));
   } else if (tipo === 'locacao') {
-    valorFixo = Number(c.valor_franquia || c.valor_mensal || 0);
+    // Valor mínimo = valor_fixo (taxa fixa) + valor_franquia (franquia de páginas)
+    valorFixo = Number(c.valor_fixo || 0) + Number(c.valor_franquia || c.valor_mensal || 0);
     var totalPag = pagPb + pagColor;
     var franquia = c.franquia_paginas || 0;
     var excedente = Math.max(0, totalPag - franquia);
@@ -723,12 +737,20 @@ async function fcCalcular() {
   document.getElementById('fc-calc-excedente-pag').value = excessPages;
   document.getElementById('fc-calc-sobra-pag').value = sobraPages;
 
+  // Calcula vencimento do boleto: dia_vencimento do mês seguinte ao mês de referência
+  var mes = document.getElementById('fc-mes').value; // 'YYYY-MM'
+  var diaVencC = c.dia_vencimento || 10;
+  var mesParts = mes.split('-');
+  // parseInt('06') = 6 → julho em JS (0-indexed) — já avança um mês naturalmente
+  var vencBoleto = new Date(parseInt(mesParts[0]), parseInt(mesParts[1]), diaVencC);
+  var vencBoletoFmt = vencBoleto.toLocaleDateString('pt-BR');
+
   var fmt = function(v) { return 'R$ ' + v.toFixed(2).replace('.', ','); };
   var html = '<div style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:8px;padding:12px 14px">' +
     '<div style="font-weight:700;color:#0369A1;margin-bottom:10px;font-size:13px">Resumo do Fechamento</div>' +
     '<div style="display:grid;grid-template-columns:1fr auto;gap:4px 24px;font-size:13px">' +
-    '<span>Páginas PB:</span><span><strong>' + pagPb + '</strong></span>' +
-    '<span>Páginas Color:</span><span><strong>' + pagColor + '</strong></span>';
+    '<span>Páginas PB rodadas:</span><span><strong>' + pagPb + '</strong></span>' +
+    '<span>Páginas Color rodadas:</span><span><strong>' + pagColor + '</strong></span>';
 
   if (tipo === 'locacao') {
     html += '<span>Total de páginas:</span><span>' + (pagPb + pagColor) + '</span>';
@@ -742,7 +764,9 @@ async function fcCalcular() {
   if (valorPaginas > 0) html += '<span>Valor páginas:</span><span>' + fmt(valorPaginas) + '</span>';
   if (valorExcedente > 0) html += '<span style="color:#DC2626">Valor excedente:</span><span style="color:#DC2626">' + fmt(valorExcedente) + '</span>';
   html += '<span style="font-weight:700;font-size:15px;border-top:2px solid #0369A1;padding-top:6px;margin-top:6px">TOTAL:</span>' +
-    '<span style="font-weight:700;font-size:15px;color:#0369A1;border-top:2px solid #0369A1;padding-top:6px;margin-top:6px">' + fmt(total) + '</span>';
+    '<span style="font-weight:700;font-size:15px;color:#0369A1;border-top:2px solid #0369A1;padding-top:6px;margin-top:6px">' + fmt(total) + '</span>' +
+    '<span style="color:#059669;font-weight:600;border-top:1px solid #BAE6FD;padding-top:4px;margin-top:2px">Vencimento do boleto:</span>' +
+    '<span style="color:#059669;font-weight:700;border-top:1px solid #BAE6FD;padding-top:4px;margin-top:2px">' + vencBoletoFmt + '</span>';
   html += '</div></div>';
   resumoEl.innerHTML = html;
 }
@@ -850,21 +874,21 @@ async function fcSalvarFechamento() {
 
   // Gerar boleto
   if (gerarBoleto && total > 0) {
-    var mesDate = new Date(mes + '-01T12:00:00');
-    var nomeMes = mesDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    var mesPartesSalvar = mes.split('-');
+    var nomeMes = new Date(parseInt(mesPartesSalvar[0]), parseInt(mesPartesSalvar[1]) - 1, 1)
+      .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     var diaVenc = c.dia_vencimento || 10;
-    var vencDate = new Date(mes + '-01T12:00:00');
-    vencDate.setMonth(vencDate.getMonth() + 1);
-    vencDate.setDate(diaVenc);
+    // Vencimento: dia_vencimento do mês seguinte ao mês de referência (sem toISOString para evitar fuso)
+    var vencBoletoDate = new Date(parseInt(mesPartesSalvar[0]), parseInt(mesPartesSalvar[1]), diaVenc);
     await sf('/rest/v1/boletos', {
       method: 'POST',
       headers: { 'Prefer': 'return=minimal' },
       body: JSON.stringify({
         cliente_id: c.cliente_id,
         contrato_id: c.id,
-        descricao: 'Fechamento ' + nomeMes + ' — ' + (c.numero || ''),
+        descricao: 'Referente ao fechamento de ' + nomeMes + ' — ' + (c.numero || ''),
         valor: total,
-        vencimento: vencDate.toISOString().slice(0, 10),
+        vencimento: _fmtDateLocal(vencBoletoDate),
         status: 'a_vencer'
       })
     });

@@ -91,18 +91,18 @@ async function salvarProspecto() {
   if (!contato) { alert('Informe o nome do contato.'); return; }
 
   var payload = {
-    empresa,
-    contato,
-    cargo: document.getElementById('mpr-cargo').value.trim() || null,
+    empresa: paraMaiusculo(empresa),
+    contato: paraMaiusculo(contato),
+    cargo: paraMaiusculo(document.getElementById('mpr-cargo').value.trim()) || null,
     telefone: document.getElementById('mpr-telefone').value.trim() || null,
     email: document.getElementById('mpr-email').value.trim() || null,
-    cidade: document.getElementById('mpr-cidade').value.trim() || null,
-    segmento: document.getElementById('mpr-segmento').value.trim() || null,
-    origem: document.getElementById('mpr-origem').value.trim() || null,
+    cidade: paraMaiusculo(document.getElementById('mpr-cidade').value.trim()) || null,
+    segmento: paraMaiusculo(document.getElementById('mpr-segmento').value.trim()) || null,
+    origem: paraMaiusculo(document.getElementById('mpr-origem').value.trim()) || null,
     status: document.getElementById('mpr-status').value,
     proximo_contato: document.getElementById('mpr-prox').value || null,
-    interesse: document.getElementById('mpr-interesse').value.trim() || null,
-    observacao: document.getElementById('mpr-obs').value.trim() || null
+    interesse: paraMaiusculo(document.getElementById('mpr-interesse').value.trim()) || null,
+    observacao: paraMaiusculo(document.getElementById('mpr-obs').value.trim()) || null
   };
 
   var res;

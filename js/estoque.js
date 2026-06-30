@@ -74,9 +74,9 @@ async function salvarPeca() {
   if (!descricao) { alert('Informe a descrição da peça.'); return; }
 
   const payload = {
-    codigo: document.getElementById('mp-codigo').value.trim() || null,
-    descricao,
-    modelo_equipamento: document.getElementById('mp-modelo').value.trim() || null,
+    codigo: paraMaiusculo(document.getElementById('mp-codigo').value.trim()) || null,
+    descricao: paraMaiusculo(descricao),
+    modelo_equipamento: paraMaiusculo(document.getElementById('mp-modelo').value.trim()) || null,
     vida_util_meses: document.getElementById('mp-vida-util').value.trim() || null,
     estoque_minimo: parseInt(document.getElementById('mp-estoque-min').value) || 0,
     custo: parseFloat(document.getElementById('mp-custo').value) || null,
@@ -149,11 +149,11 @@ async function salvarFornecedor() {
   if (!nome) { alert('Informe o nome do fornecedor.'); return; }
 
   const payload = {
-    nome,
+    nome: paraMaiusculo(nome),
     cnpj: document.getElementById('mf-cnpj').value.trim() || null,
     telefone: document.getElementById('mf-telefone').value.trim() || null,
     email: document.getElementById('mf-email').value.trim() || null,
-    contato: document.getElementById('mf-contato').value.trim() || null
+    contato: paraMaiusculo(document.getElementById('mf-contato').value.trim()) || null
   };
 
   let res;
@@ -239,7 +239,7 @@ async function salvarEntrada() {
     fornecedor_id: fornId,
     quantidade: qtd,
     custo_unitario: custo,
-    nota_fiscal: document.getElementById('me-nota-fiscal').value.trim() || null,
+    nota_fiscal: paraMaiusculo(document.getElementById('me-nota-fiscal').value.trim()) || null,
     data_compra: document.getElementById('me-data-compra').value || null,
     data_entrega_prevista: document.getElementById('me-data-entrega').value || null,
     codigo_rastreio: document.getElementById('me-rastreio').value.trim() || null,

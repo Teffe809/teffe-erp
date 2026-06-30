@@ -315,7 +315,7 @@ async function salvarContrato() {
   const payload = {
     cliente_id: clienteId,
     numero,
-    descricao: document.getElementById('mc-descricao').value.trim() || null,
+    descricao: paraMaiusculo(document.getElementById('mc-descricao').value.trim()) || null,
     data_inicio: inicio,
     data_fim: fim || null,
     duracao_meses: duracao || null,
@@ -323,7 +323,7 @@ async function salvarContrato() {
     dia_vencimento: diaVenc,
     status: document.getElementById('mc-status').value,
     indice_reajuste: document.getElementById('mc-indice').value,
-    observacao: document.getElementById('mc-obs').value.trim() || null,
+    observacao: paraMaiusculo(document.getElementById('mc-obs').value.trim()) || null,
     servicos_contratados: servicosSelecionados,
     tipo_contrato: tipo,
     valor_pagina_pb: parseFloat(document.getElementById('mc-val-pb').value) || null,
@@ -763,7 +763,7 @@ function _abrirExtratoFechamento(f, c, clienteNome, clienteCidade, equips) {
     '<div style="background:#0A4B8D;padding:15px;text-align:center;margin-top:30px;">' +
       '<p style="color:white;margin:0;font-size:11px;">Teffe Tecnologia © 2026 | contato@teffe.com.br | (14) 99828-9248 | teffe.com.br</p>' +
     '</div>' +
-    '<script>window.onload=function(){window.print();}<\/script></body></html>';
+    '</body></html>';
 
   var w = window.open('', '_blank', 'width=960,height=860');
   if (w) { w.document.open(); w.document.write(html); w.document.close(); }

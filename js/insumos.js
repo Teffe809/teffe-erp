@@ -82,15 +82,15 @@ async function salvarInsumo() {
   if (!nome) { alert('Informe o nome do insumo.'); return; }
 
   var payload = {
-    nome,
-    codigo:               document.getElementById('mins-codigo').value.trim() || null,
+    nome: paraMaiusculo(nome),
+    codigo:               paraMaiusculo(document.getElementById('mins-codigo').value.trim()) || null,
     tipo:                 document.getElementById('mins-tipo').value || 'toner',
-    modelo_equipamento:   document.getElementById('mins-modelo').value.trim() || null,
-    marca_equipamento:    document.getElementById('mins-marca').value.trim() || null,
+    modelo_equipamento:   paraMaiusculo(document.getElementById('mins-modelo').value.trim()) || null,
+    marca_equipamento:    paraMaiusculo(document.getElementById('mins-marca').value.trim()) || null,
     quantidade_estoque:   parseInt(document.getElementById('mins-qtd-estoque').value) || 0,
     quantidade_minima:    parseInt(document.getElementById('mins-qtd-minima').value) || 1,
     fornecedor_id:        document.getElementById('mins-fornecedor').value || null,
-    observacoes:          document.getElementById('mins-obs').value.trim() || null,
+    observacoes:          paraMaiusculo(document.getElementById('mins-obs').value.trim()) || null,
   };
 
   var method = id ? 'PATCH' : 'POST';

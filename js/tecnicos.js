@@ -113,7 +113,7 @@ async function erpTecCriar() {
   const { ok, data: errD } = await sf('/rest/v1/tecnicos', {
     method: 'POST',
     headers: { 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ nome, email, telefone: tel || null, matricula: mat || null, user_id: userId })
+    body: JSON.stringify({ nome: paraMaiusculo(nome), email, telefone: paraMaiusculo(tel) || null, matricula: paraMaiusculo(mat) || null, user_id: userId })
   });
   btn.disabled = false; btn.textContent = 'Criar Técnico';
   if (!ok) {
@@ -154,9 +154,9 @@ async function erpTecSalvarEdicao() {
   if (!nome) { erroEl.style.display = 'block'; erroEl.textContent = 'Nome é obrigatório.'; return; }
 
   const payload = {
-    nome,
-    telefone:  document.getElementById('tec-edit-tel').value.trim() || null,
-    matricula: document.getElementById('tec-edit-mat').value.trim() || null,
+    nome: paraMaiusculo(nome),
+    telefone:  paraMaiusculo(document.getElementById('tec-edit-tel').value.trim()) || null,
+    matricula: paraMaiusculo(document.getElementById('tec-edit-mat').value.trim()) || null,
   };
   const { ok, data } = await sf('/rest/v1/tecnicos?id=eq.' + id, {
     method: 'PATCH',

@@ -49,7 +49,10 @@ async function carregarBoletos() {
       ? '<button class="btn-icon" title="Marcar pago" onclick="abrirModalPagamentoBoleto(\'' + b.id + '\')"><i class="ti ti-check" style="color:#16A34A"></i></button>'
       : '';
     const btnPdf = b.arquivo_url
-      ? '<a class="btn-icon" href="' + _esc(b.arquivo_url) + '" target="_blank" title="Download PDF"><i class="ti ti-download"></i></a>'
+      ? '<a class="btn-icon" href="' + _esc(b.arquivo_url) + '" target="_blank" title="Ver Boleto PDF"><i class="ti ti-receipt-2"></i></a>'
+      : '';
+    const btnExtrato = b.arquivo_extrato_url
+      ? '<a class="btn-icon" href="' + _esc(b.arquivo_extrato_url) + '" target="_blank" title="Ver Extrato PDF"><i class="ti ti-file-text" style="color:#1D4ED8"></i></a>'
       : '';
     const btnEdit = '<button class="btn-icon" title="Editar" onclick=\'abrirModalBoleto(' + JSON.stringify(b) + ')\'><i class="ti ti-pencil"></i></button>';
     const btnDel  = '<button class="btn-icon" title="Excluir" onclick="excluirBoleto(\'' + b.id + '\')"><i class="ti ti-trash" style="color:#DC2626"></i></button>';
@@ -60,7 +63,7 @@ async function carregarBoletos() {
       '<td><strong>' + val + '</strong></td>' +
       '<td>' + venc + '</td>' +
       '<td>' + badge + '</td>' +
-      '<td>' + btnPago + btnPdf + btnEdit + btnDel + '</td>' +
+      '<td>' + btnPago + btnPdf + btnExtrato + btnEdit + btnDel + '</td>' +
       '</tr>';
   }).join('');
 
@@ -90,6 +93,7 @@ async function abrirModalBoleto(b) {
   document.getElementById('mbol-venc').value = b ? (b.vencimento || '') : '';
   document.getElementById('mbol-obs').value = b ? (b.observacao || '') : '';
   document.getElementById('mbol-arquivo').value = '';
+  document.getElementById('mbol-extrato').value = '';
   document.getElementById('modal-boleto').classList.add('open');
 }
 
@@ -139,20 +143,30 @@ async function salvarBoleto() {
     const file = fileInput.files[0];
     const path = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     arquivoUrl = await _uploadArquivo('boletos-pdf', path, file);
-    if (!arquivoUrl) { alert('Erro ao fazer upload do PDF. Verifique o bucket boletos-pdf.'); return; }
+    if (!arquivoUrl) { alert('Erro ao fazer upload do PDF do boleto. Verifique o bucket boletos-pdf.'); return; }
+  }
+
+  const fileExtrato = document.getElementById('mbol-extrato');
+  let extratoUrl = null;
+  if (fileExtrato && fileExtrato.files[0]) {
+    const file = fileExtrato.files[0];
+    const path = 'ext_' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    extratoUrl = await _uploadArquivo('boletos-pdf', path, file);
+    if (!extratoUrl) { alert('Erro ao fazer upload do extrato. Verifique o bucket boletos-pdf.'); return; }
   }
 
   const payload = {
     cliente_id: clienteId,
     contrato_id: document.getElementById('mbol-contrato').value || null,
-    numero_nf: document.getElementById('mbol-nf').value.trim() || null,
-    numero_boleto: document.getElementById('mbol-numero').value.trim() || null,
+    numero_nf: paraMaiusculo(document.getElementById('mbol-nf').value.trim()) || null,
+    numero_boleto: paraMaiusculo(document.getElementById('mbol-numero').value.trim()) || null,
     valor,
     vencimento: venc,
     status: statusCalc,
-    observacao: document.getElementById('mbol-obs').value.trim() || null
+    observacao: paraMaiusculo(document.getElementById('mbol-obs').value.trim()) || null
   };
   if (arquivoUrl) payload.arquivo_url = arquivoUrl;
+  if (extratoUrl) payload.arquivo_extrato_url = extratoUrl;
 
   console.log('[salvarBoleto] clienteId:', clienteId, '| payload:', JSON.stringify(payload));
 

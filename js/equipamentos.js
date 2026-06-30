@@ -172,16 +172,16 @@ async function salvarEquipamento() {
 
   var tipo = document.querySelector('input[name="meq-tipo-impressao"]:checked');
   var payload = {
-    marca,
-    modelo,
-    serial: serial || null,
+    marca: paraMaiusculo(marca),
+    modelo: paraMaiusculo(modelo),
+    serial: paraMaiusculo(serial) || null,
     fornecedor_id: document.getElementById('meq-fornecedor').value || null,
     data_compra: document.getElementById('meq-data-compra').value || null,
     garantia_dias: parseInt(document.getElementById('meq-garantia-dias').value) || null,
     tipo_impressao: tipo ? tipo.value : 'monocromatico',
     status: document.getElementById('meq-status').value || 'disponivel',
-    localizacao: document.getElementById('meq-localizacao').value.trim() || null,
-    observacoes: document.getElementById('meq-obs').value.trim() || null,
+    localizacao: paraMaiusculo(document.getElementById('meq-localizacao').value.trim()) || null,
+    observacoes: paraMaiusculo(document.getElementById('meq-obs').value.trim()) || null,
     ultimo_contador: parseInt(document.getElementById('meq-ultimo-contador').value) || 0,
     proprio_cliente: document.getElementById('meq-proprio-cliente').checked,
   };

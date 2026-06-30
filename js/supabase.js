@@ -7,6 +7,8 @@ function capitalizarNome(nome) {
   return nome.toLowerCase().split(' ').map(function(p) { return p.charAt(0).toUpperCase() + p.slice(1); }).join(' ');
 }
 
+function paraMaiusculo(texto) { return texto ? texto.toUpperCase() : texto; }
+
 let _erpTok = null;
 let _erpRefresh = null;
 let _erpNome = '';

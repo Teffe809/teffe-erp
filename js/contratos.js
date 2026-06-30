@@ -12,6 +12,8 @@
 var _fcContratoAtual = null;
 var _fcFechamentosData = [];
 
+var _TEFFE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 175" style="height:60px;width:auto;display:block;"><rect width="580" height="175" fill="#ffffff"/><polygon points="95,31 140,57 140,109 95,135 50,109 50,57" fill="none" stroke="#E07820" stroke-width="5" stroke-linejoin="round"/><polygon points="95,37 135,60 135,106 95,129 55,106 55,60" fill="#ffffff"/><polygon points="95,43 130,63 130,103 95,123 60,103 60,63" fill="#1A2E5A"/><rect x="78" y="62" width="34" height="6" rx="2.5" fill="#E07820"/><rect x="91" y="62" width="7" height="30" rx="2.5" fill="#E07820"/><line x1="140" y1="57" x2="163" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="42" r="3.8" fill="#E07820"/><line x1="140" y1="109" x2="163" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="124" r="3.8" fill="#E07820"/><line x1="95" y1="135" x2="95" y2="158" stroke="#E07820" stroke-width="1.8"/><circle cx="95" cy="161" r="3.8" fill="#E07820"/><line x1="50" y1="109" x2="27" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="124" r="3.8" fill="#E07820"/><line x1="50" y1="57" x2="27" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="42" r="3.8" fill="#E07820"/><text font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="76" x="200" y="103"><tspan fill="#1A2E5A">TE</tspan><tspan fill="#E07820">FFE</tspan></text><rect x="200" y="111" width="310" height="3" rx="1.5" fill="#E07820"/><text x="202" y="139" font-family="Arial,sans-serif" font-weight="700" font-size="15" fill="#E07820" letter-spacing="6">TECNOLOGIA</text></svg>';
+
 async function carregarContratos() {
   const wrap = document.querySelector('#view-contratos .table-wrap');
   wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
@@ -582,18 +584,31 @@ async function fcCarregarFechamentos(contratoId) {
   var html = '<table class="erp-table"><thead><tr><th>Mês</th><th>Págs PB</th><th>Págs Color</th><th>Valor Fixo</th><th>Excedente</th><th>Total</th><th>Boleto</th><th></th></tr></thead><tbody>';
   rows.forEach(function(f, idx) {
     var mesLabel = f.mes_referencia ? new Date(f.mes_referencia + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : '—';
+    var ppb = (f.contador_pb_atual || 0) - (f.contador_pb_anterior || 0);
+    var pcol = (f.contador_color_atual || 0) - (f.contador_color_anterior || 0);
     var total = 'R$ ' + Number(f.valor_total || 0).toFixed(2).replace('.', ',');
     var boletoSt = f.boleto_gerado
       ? '<span class="badge" style="background:#DCFCE7;color:#15803D">Gerado</span>'
       : '<span class="badge" style="background:#FEF3C7;color:#B45309">Pendente</span>';
-    html += '<tr><td><strong>' + mesLabel + '</strong></td><td>' + (f.paginas_pb || 0) + '</td><td>' + (f.paginas_color || 0) + '</td>' +
+    html += '<tr><td><strong>' + mesLabel + '</strong></td><td>' + ppb + '</td><td>' + pcol + '</td>' +
       '<td>R$ ' + Number(f.valor_fixo || 0).toFixed(2).replace('.', ',') + '</td>' +
       '<td>R$ ' + Number(f.valor_excedente || 0).toFixed(2).replace('.', ',') + '</td>' +
       '<td><strong>' + total + '</strong></td><td>' + boletoSt + '</td>' +
-      '<td><button class="btn-icon" title="Extrato PDF" onclick="fcImprimirExtrato(' + idx + ')"><i class="ti ti-file-text" style="color:#1D4ED8"></i></button></td></tr>';
+      '<td style="white-space:nowrap">' +
+        '<button class="btn-icon" title="Extrato PDF" onclick="fcImprimirExtrato(' + idx + ')"><i class="ti ti-file-text" style="color:#1D4ED8"></i></button>' +
+        '<button class="btn-icon" title="Excluir fechamento" onclick="fcExcluirFechamento(\'' + f.id + '\',\'' + contratoId + '\')"><i class="ti ti-trash" style="color:#DC2626"></i></button>' +
+      '</td></tr>';
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
+}
+
+async function fcExcluirFechamento(id, contratoId) {
+  if (!confirm('Tem certeza que deseja excluir este fechamento?\n\nATENÇÃO: O boleto gerado NÃO será excluído automaticamente.')) return;
+  var r = await sf('/rest/v1/fechamentos_mensais?id=eq.' + id, { method: 'DELETE' });
+  if (!r.ok) { alert('Erro ao excluir: ' + JSON.stringify(r.data)); return; }
+  await fcCarregarFechamentos(contratoId);
+  if (typeof carregarFechamentosView === 'function') carregarFechamentosView();
 }
 
 async function fcImprimirExtrato(idx) {
@@ -728,9 +743,11 @@ function _abrirExtratoFechamento(f, c, clienteNome, clienteCidade, equips) {
       '<button onclick="window.close()" style="padding:8px 18px;border:1px solid #D1D5DB;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">Fechar</button>' +
       '<button onclick="window.print()" style="padding:8px 22px;border:none;border-radius:6px;background:#0A4B8D;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">⎙ Imprimir / Salvar PDF</button>' +
     '</div>' +
-    '<div style="background:#0A4B8D;padding:30px;display:flex;justify-content:space-between;align-items:center;">' +
-      '<div><h1 style="color:white;margin:0;font-size:24px;font-weight:900;">TEFFE TECNOLOGIA</h1>' +
-      '<p style="color:#F87A13;margin:4px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:1px;">EXTRATO DE FECHAMENTO MENSAL</p></div>' +
+    '<div style="background:#0A4B8D;padding:24px 30px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<div>' +
+        '<div style="background:#fff;border-radius:8px;padding:6px 14px;display:inline-block;margin-bottom:6px;">' + _TEFFE_SVG + '</div>' +
+        '<p style="color:#F87A13;margin:2px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:700;">EXTRATO DE FECHAMENTO MENSAL</p>' +
+      '</div>' +
       '<div style="color:white;text-align:right;font-size:12px;line-height:1.9;"><p style="margin:0">contato@teffe.com.br</p><p style="margin:0">(14) 99828-9248</p><p style="margin:0">teffe.com.br</p></div>' +
     '</div>' +
     '<div style="padding:20px;border-bottom:2px solid #0A4B8D;">' +
@@ -1070,5 +1087,6 @@ async function fcSalvarFechamento() {
   fecharModal('modal-fechamento-mensal');
   await fcCarregarFechamentos(c.id);
   console.log('[fcSalvarFechamento] _fcFechamentosData após reload:', _fcFechamentosData.length, 'rows');
+  if (typeof carregarFechamentosView === 'function') carregarFechamentosView();
   btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Confirmar e Gerar Boleto';
 }

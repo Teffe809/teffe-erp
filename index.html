@@ -76,6 +76,11 @@
         <i class="ti ti-file-text"></i> <span class="nav-label">Contratos</span>
       </button>
 
+      <div class="sidebar-section">Operacional</div>
+      <button class="nav-item" id="nav-fechamentos" onclick="erpShowView('fechamentos');carregarFechamentosView()">
+        <i class="ti ti-calendar-month"></i> <span class="nav-label">Fechamentos</span>
+      </button>
+
       <div class="sidebar-section">Financeiro</div>
       <button class="nav-item" id="nav-fin-dashboard" onclick="erpShowView('fin-dashboard')">
         <i class="ti ti-chart-bar"></i> <span class="nav-label">Dashboard</span>
@@ -181,6 +186,40 @@
           <button class="btn-primary" onclick="abrirModalContrato()"><i class="ti ti-plus"></i> Novo Contrato</button>
         </div>
         <div class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- OPERACIONAL: FECHAMENTOS -->
+      <div class="erp-view" id="view-fechamentos">
+        <div class="view-header">
+          <h1><i class="ti ti-calendar-month"></i> Fechamentos Mensais</h1>
+          <button class="btn-primary" onclick="fchNovoFechamento()"><i class="ti ti-plus"></i> Novo Fechamento</button>
+        </div>
+        <div class="table-wrap">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:0 0 14px;border-bottom:1px solid #E5E7EB;margin-bottom:14px;">
+            <div class="fg" style="margin:0;min-width:160px;">
+              <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:4px;">Mês/Ano</label>
+              <input type="month" id="fch-filter-mes" class="ac-input" style="height:36px;font-size:13px;" onchange="fchAplicarFiltros()"/>
+            </div>
+            <div class="fg" style="margin:0;min-width:220px;flex:1;">
+              <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:4px;">Cliente</label>
+              <select id="fch-filter-cliente" class="ac-input" style="height:36px;font-size:13px;" onchange="fchAplicarFiltros()">
+                <option value="">Todos os clientes</option>
+              </select>
+            </div>
+            <div class="fg" style="margin:0;min-width:160px;">
+              <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:4px;">Status Boleto</label>
+              <select id="fch-filter-boleto" class="ac-input" style="height:36px;font-size:13px;" onchange="fchAplicarFiltros()">
+                <option value="">Todos</option>
+                <option value="gerado">Gerado</option>
+                <option value="pendente">Pendente</option>
+              </select>
+            </div>
+            <button class="btn-secondary" style="height:36px;font-size:13px;" onclick="document.getElementById('fch-filter-mes').value='';document.getElementById('fch-filter-cliente').value='';document.getElementById('fch-filter-boleto').value='';fchAplicarFiltros()">
+              <i class="ti ti-x"></i> Limpar
+            </button>
+          </div>
+          <div id="fch-lista-wrap"><div class="tbl-loading">Carregando...</div></div>
+        </div>
       </div>
 
       <!-- FINANCEIRO DASHBOARD -->
@@ -697,6 +736,28 @@
 </div>
 
 <!-- ══════════════════════ MODAL DETALHE CONTRATO ══════════════════════ -->
+<!-- MODAL: Selecionar Contrato para Novo Fechamento (via view Operacional) -->
+<div class="modal-overlay" id="modal-selecionar-contrato" onclick="if(event.target===this)fecharModal('modal-selecionar-contrato')">
+  <div class="modal-box" style="width:480px;max-width:96vw">
+    <div class="modal-header">
+      <h2>Novo Fechamento — Selecionar Contrato</h2>
+      <button class="modal-close" onclick="fecharModal('modal-selecionar-contrato')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px">
+      <div class="fg">
+        <label>Contrato (ativos)</label>
+        <select id="fch-select-contrato" class="ac-input" style="width:100%">
+          <option value="">Carregando...</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px">
+        <button class="btn-secondary" onclick="fecharModal('modal-selecionar-contrato')">Cancelar</button>
+        <button class="btn-primary" onclick="fchConfirmarContrato()"><i class="ti ti-arrow-right"></i> Continuar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-detalhe-contrato" onclick="if(event.target===this)fecharModal('modal-detalhe-contrato')">
   <div class="modal-box" style="width:860px;max-width:96vw">
     <div class="modal-header">
@@ -1221,6 +1282,7 @@
 <script src="js/estoque.js"></script>
 <script src="js/insumos.js"></script>
 <script src="js/contratos.js"></script>
+<script src="js/fechamentos.js"></script>
 <script src="js/financeiro.js"></script>
 <script src="js/crm.js"></script>
 <script src="js/clientes.js"></script>

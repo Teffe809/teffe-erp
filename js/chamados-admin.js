@@ -118,7 +118,7 @@ async function erpChamConfirmarEntrega(id, tecnicoId, numChamado) {
   if (tecnicoId) {
     const tec = _erpTecs.find(function(t) { return t.id === tecnicoId; });
     if (tec && tec.email && _erpTok) {
-      const html = '<p>Olá <strong>' + (tec.nome || 'Técnico') + '</strong>,</p><p>As peças para o chamado <strong>#' + numChamado + '</strong> foram entregues. Por favor, acesse o portal e inicie o atendimento.</p><p>Atenciosamente,<br><strong>Teffe Tecnologia</strong></p>';
+      const html = '<p>Olá <strong>' + (tec.nome ? capitalizarNome(tec.nome) : 'Técnico') + '</strong>,</p><p>As peças para o chamado <strong>#' + numChamado + '</strong> foram entregues. Por favor, acesse o portal e inicie o atendimento.</p><p>Atenciosamente,<br><strong>Teffe Tecnologia</strong></p>';
       erpEnviarEmail(tec.email, 'Peças Disponíveis — Chamado #' + numChamado + ' — Teffe Tecnologia', html).catch(function() {});
     }
   }

@@ -2,6 +2,11 @@ const SURL = 'https://hlfjcpgrxiktgctozilk.supabase.co';
 const SKEY = 'sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
 const EDGE_EMAIL = SURL + '/functions/v1/enviar-email';
 
+function capitalizarNome(nome) {
+  if (!nome) return '';
+  return nome.toLowerCase().split(' ').map(function(p) { return p.charAt(0).toUpperCase() + p.slice(1); }).join(' ');
+}
+
 let _erpTok = null;
 let _erpRefresh = null;
 let _erpNome = '';

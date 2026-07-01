@@ -50,81 +50,114 @@
 
     <!-- SIDEBAR -->
     <aside class="erp-sidebar">
-      <div class="sidebar-section">Estoque</div>
-      <button class="nav-item" id="nav-equipamentos" onclick="erpShowView('equipamentos')">
-        <i class="ti ti-printer"></i> <span class="nav-label">Equipamentos</span>
-      </button>
-      <button class="nav-item active" id="nav-pecas" onclick="erpShowView('pecas')">
-        <i class="ti ti-puzzle"></i> <span>Peças</span>
-      </button>
-      <button class="nav-item" id="nav-insumos" onclick="erpShowView('insumos')">
-        <i class="ti ti-droplet"></i> <span>Insumos</span>
-      </button>
-      <button class="nav-item" id="nav-fornecedores" onclick="erpShowView('fornecedores')">
-        <i class="ti ti-truck"></i> <span>Fornecedores</span>
-      </button>
-      <button class="nav-item" id="nav-entradas" onclick="erpShowView('entradas')">
-        <i class="ti ti-package-import"></i> <span>Entradas</span>
-      </button>
-      <button class="nav-item" id="nav-alertas" onclick="erpShowView('alertas')">
-        <i class="ti ti-alert-triangle"></i> <span class="nav-label">Alertas</span>
-        <span class="nav-badge" id="nav-alertas-badge"></span>
-      </button>
+      <div class="sidebar-group">
+        <button class="nav-item active" id="nav-dashboard" onclick="erpShowView('dashboard')">
+          <i class="ti ti-home"></i> <span class="nav-label">Início</span>
+        </button>
+      </div>
 
-      <div class="sidebar-section">Comercial</div>
-      <button class="nav-item" id="nav-contratos" onclick="erpShowView('contratos')">
-        <i class="ti ti-file-text"></i> <span class="nav-label">Contratos</span>
-      </button>
+      <div class="sidebar-group" data-modulo="estoque">
+        <div class="sidebar-section">Estoque</div>
+        <button class="nav-item" id="nav-equipamentos" onclick="erpShowView('equipamentos')">
+          <i class="ti ti-printer"></i> <span class="nav-label">Equipamentos</span>
+        </button>
+        <button class="nav-item" id="nav-pecas" onclick="erpShowView('pecas')">
+          <i class="ti ti-puzzle"></i> <span>Peças</span>
+        </button>
+        <button class="nav-item" id="nav-insumos" onclick="erpShowView('insumos')">
+          <i class="ti ti-droplet"></i> <span>Insumos</span>
+        </button>
+        <button class="nav-item" id="nav-fornecedores" onclick="erpShowView('fornecedores')">
+          <i class="ti ti-truck"></i> <span>Fornecedores</span>
+        </button>
+        <button class="nav-item" id="nav-entradas" onclick="erpShowView('entradas')">
+          <i class="ti ti-package-import"></i> <span>Entradas</span>
+        </button>
+        <button class="nav-item" id="nav-alertas" onclick="erpShowView('alertas')">
+          <i class="ti ti-alert-triangle"></i> <span class="nav-label">Alertas</span>
+          <span class="nav-badge" id="nav-alertas-badge"></span>
+        </button>
+      </div>
 
-      <div class="sidebar-section">Operacional</div>
-      <button class="nav-item" id="nav-fechamentos" onclick="erpShowView('fechamentos');carregarFechamentosView()">
-        <i class="ti ti-calendar-month"></i> <span class="nav-label">Fechamentos</span>
-      </button>
+      <div class="sidebar-group" data-modulo="comercial">
+        <div class="sidebar-section">Comercial</div>
+        <button class="nav-item" id="nav-contratos" onclick="erpShowView('contratos')">
+          <i class="ti ti-file-text"></i> <span class="nav-label">Contratos</span>
+        </button>
+      </div>
 
-      <div class="sidebar-section">Financeiro</div>
-      <button class="nav-item" id="nav-fin-dashboard" onclick="erpShowView('fin-dashboard')">
-        <i class="ti ti-chart-bar"></i> <span class="nav-label">Dashboard</span>
-      </button>
-      <button class="nav-item" id="nav-receber" onclick="erpShowView('receber')">
-        <i class="ti ti-arrow-down-circle"></i> <span class="nav-label">Receber</span>
-      </button>
-      <button class="nav-item" id="nav-pagar" onclick="erpShowView('pagar')">
-        <i class="ti ti-arrow-up-circle"></i> <span class="nav-label">Pagar</span>
-      </button>
-      <button class="nav-item" id="nav-boletos" onclick="erpShowView('boletos')">
-        <i class="ti ti-receipt"></i> <span class="nav-label">Boletos</span>
-      </button>
-      <button class="nav-item" id="nav-fluxo" onclick="erpShowView('fluxo')">
-        <i class="ti ti-trending-up"></i> <span class="nav-label">Fluxo de Caixa</span>
-      </button>
+      <div class="sidebar-group" data-modulo="operacional">
+        <div class="sidebar-section">Operacional</div>
+        <button class="nav-item" id="nav-fechamentos" onclick="erpShowView('fechamentos');carregarFechamentosView()">
+          <i class="ti ti-calendar-month"></i> <span class="nav-label">Fechamentos</span>
+        </button>
+      </div>
 
-      <div class="sidebar-section">CRM</div>
-      <button class="nav-item" id="nav-prospectos" onclick="erpShowView('prospectos')">
-        <i class="ti ti-users"></i> <span class="nav-label">Prospectos</span>
-      </button>
+      <div class="sidebar-group" data-modulo="financeiro">
+        <div class="sidebar-section">Financeiro</div>
+        <button class="nav-item" id="nav-fin-dashboard" onclick="erpShowView('fin-dashboard')">
+          <i class="ti ti-chart-bar"></i> <span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-item" id="nav-receber" onclick="erpShowView('receber')">
+          <i class="ti ti-arrow-down-circle"></i> <span class="nav-label">Receber</span>
+        </button>
+        <button class="nav-item" id="nav-pagar" onclick="erpShowView('pagar')">
+          <i class="ti ti-arrow-up-circle"></i> <span class="nav-label">Pagar</span>
+        </button>
+        <button class="nav-item" id="nav-boletos" onclick="erpShowView('boletos')">
+          <i class="ti ti-receipt"></i> <span class="nav-label">Boletos</span>
+        </button>
+        <button class="nav-item" id="nav-fluxo" onclick="erpShowView('fluxo')">
+          <i class="ti ti-trending-up"></i> <span class="nav-label">Fluxo de Caixa</span>
+        </button>
+      </div>
 
-      <div class="sidebar-section">Clientes</div>
-      <button class="nav-item" id="nav-clientes" onclick="erpShowView('clientes')">
-        <i class="ti ti-building"></i> <span class="nav-label">Clientes</span>
-      </button>
+      <div class="sidebar-group" data-modulo="crm">
+        <div class="sidebar-section">CRM</div>
+        <button class="nav-item" id="nav-prospectos" onclick="erpShowView('prospectos')">
+          <i class="ti ti-users"></i> <span class="nav-label">Prospectos</span>
+        </button>
+      </div>
 
-      <div class="sidebar-section">Admin</div>
-      <button class="nav-item" id="nav-tecnicos" onclick="erpShowView('tecnicos')">
-        <i class="ti ti-user-check"></i> <span class="nav-label">Técnicos</span>
-      </button>
-      <button class="nav-item" id="nav-chamados-admin" onclick="erpShowView('chamados-admin')">
-        <i class="ti ti-headset"></i> <span class="nav-label">Chamados</span>
-      </button>
-      <button class="nav-item" id="nav-logs" onclick="erpShowView('logs')">
-        <i class="ti ti-list-details"></i> <span class="nav-label">Logs</span>
-      </button>
+      <div class="sidebar-group" data-modulo="clientes">
+        <div class="sidebar-section">Clientes</div>
+        <button class="nav-item" id="nav-clientes" onclick="erpShowView('clientes')">
+          <i class="ti ti-building"></i> <span class="nav-label">Clientes</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group" data-modulo="admin">
+        <div class="sidebar-section">Admin</div>
+        <button class="nav-item" id="nav-tecnicos" onclick="erpShowView('tecnicos')">
+          <i class="ti ti-user-check"></i> <span class="nav-label">Técnicos</span>
+        </button>
+        <button class="nav-item" id="nav-chamados-admin" onclick="erpShowView('chamados-admin')">
+          <i class="ti ti-headset"></i> <span class="nav-label">Chamados</span>
+        </button>
+        <button class="nav-item" id="nav-logs" onclick="erpShowView('logs')">
+          <i class="ti ti-list-details"></i> <span class="nav-label">Logs</span>
+        </button>
+        <button class="nav-item" id="nav-usuarios-erp" onclick="erpShowView('usuarios-erp')">
+          <i class="ti ti-shield-lock"></i> <span class="nav-label">Usuários ERP</span>
+        </button>
+      </div>
     </aside>
 
     <!-- CONTEÚDO -->
     <main class="erp-content">
 
+      <!-- DASHBOARD INICIAL -->
+      <div class="erp-view active" id="view-dashboard">
+        <div class="dash-header" id="dash-logo-wrap"></div>
+        <div class="dash-msg-acesso" id="dash-msg-acesso" style="display:none"><i class="ti ti-lock"></i> <span id="dash-msg-acesso-texto"></span></div>
+        <div class="dash-saudacao" id="dash-saudacao"></div>
+        <div class="dash-cards" id="dash-cards-wrap"></div>
+        <div class="dash-section-title">Acesso Rápido</div>
+        <div class="dash-mod-grid" id="dash-acesso-rapido"></div>
+      </div>
+
       <!-- PEÇAS -->
-      <div class="erp-view active" id="view-pecas">
+      <div class="erp-view" id="view-pecas">
         <div class="view-header">
           <h1><i class="ti ti-puzzle"></i> Peças</h1>
           <button class="btn-primary" onclick="abrirModalPeca()"><i class="ti ti-plus"></i> Nova Peça</button>
@@ -417,6 +450,15 @@
           <input type="text" id="fil-log-user" oninput="carregarLogs()" placeholder="Filtrar por usuário" style="width:220px"/>
         </div>
         <div id="logs-wrap" class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- USUÁRIOS ERP -->
+      <div class="erp-view" id="view-usuarios-erp">
+        <div class="view-header">
+          <h1><i class="ti ti-shield-lock"></i> Usuários ERP</h1>
+          <button class="btn-primary" onclick="abrirModalUsuarioErp()"><i class="ti ti-plus"></i> Novo Usuário ERP</button>
+        </div>
+        <div class="table-wrap" id="usu-erp-table-wrap"><div class="tbl-loading">Carregando...</div></div>
       </div>
 
     </main>
@@ -1281,6 +1323,44 @@
   </div>
 </div>
 
+<!-- ══════════════════════ MODAL USUÁRIO ERP ══════════════════════ -->
+<div class="modal-overlay" id="modal-usuario-erp" onclick="if(event.target===this)fecharModal('modal-usuario-erp')">
+  <div class="modal-box" style="width:560px;">
+    <div class="modal-header">
+      <h2>Novo Usuário ERP</h2>
+      <button class="modal-close" onclick="fecharModal('modal-usuario-erp')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-grid-2">
+        <div class="fg"><label>Nome *</label><input id="mue-nome" type="text" placeholder="Nome completo"/></div>
+        <div class="fg"><label>E-mail *</label><input id="mue-email" type="email" placeholder="usuario@teffe.com.br"/></div>
+      </div>
+      <div class="fg"><label>Senha Temporária *</label><input id="mue-senha" type="password" placeholder="Mínimo 6 caracteres"/></div>
+      <div class="fg-check" style="margin-top:6px">
+        <input type="checkbox" id="mue-acesso-total" onchange="mueToggleAcessoTotal()"/>
+        <label for="mue-acesso-total"><strong>Acesso Total (Master)</strong> — acessa todos os módulos do ERP</label>
+      </div>
+      <div id="mue-permissoes-wrap">
+        <label style="display:block;margin-bottom:6px">Permissões por módulo</label>
+        <div class="perm-grid">
+          <label class="perm-check"><input type="checkbox" id="mue-perm-estoque"/> <span>Estoque<small>Equipamentos, Peças, Insumos, Fornecedores</small></span></label>
+          <label class="perm-check"><input type="checkbox" id="mue-perm-comercial"/> <span>Comercial<small>Contratos</small></span></label>
+          <label class="perm-check"><input type="checkbox" id="mue-perm-financeiro"/> <span>Financeiro<small>Dashboard, Receber, Pagar, Boletos, Fluxo</small></span></label>
+          <label class="perm-check"><input type="checkbox" id="mue-perm-operacional"/> <span>Operacional<small>Fechamentos</small></span></label>
+          <label class="perm-check"><input type="checkbox" id="mue-perm-crm"/> <span>CRM<small>Prospectos</small></span></label>
+          <label class="perm-check"><input type="checkbox" id="mue-perm-clientes"/> <span>Clientes</span></label>
+          <label class="perm-check"><input type="checkbox" id="mue-perm-admin"/> <span>Admin<small>Técnicos, Chamados, Logs</small></span></label>
+        </div>
+      </div>
+      <div id="mue-erro" style="display:none;color:#DC2626;font-size:13px;margin-top:10px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-usuario-erp')">Cancelar</button>
+      <button class="btn-primary" id="mue-btn-salvar" onclick="salvarUsuarioErp()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/supabase.js"></script>
 <script src="js/estoque.js"></script>
 <script src="js/insumos.js"></script>
@@ -1293,6 +1373,8 @@
 <script src="js/boletos.js"></script>
 <script src="js/tecnicos.js"></script>
 <script src="js/chamados-admin.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/usuarios-erp.js"></script>
 <script>
 // Unifica confirmarPagamento para receber/pagar/boleto
 async function confirmarPagamentoUnificado() {

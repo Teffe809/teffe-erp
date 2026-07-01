@@ -13,6 +13,33 @@ let _erpTok = null;
 let _erpRefresh = null;
 let _erpNome = '';
 let _refreshando = false;
+let _erpPerfil = null; // { id, nome, email, acesso_total, permissoes }
+let _erpMsgAcesso = null;
+
+var _ERP_VIEW_MODULO = {
+  pecas: 'estoque', insumos: 'estoque', fornecedores: 'estoque', entradas: 'estoque', alertas: 'estoque', equipamentos: 'estoque',
+  contratos: 'comercial',
+  fechamentos: 'operacional',
+  'fin-dashboard': 'financeiro', receber: 'financeiro', pagar: 'financeiro', boletos: 'financeiro', fluxo: 'financeiro',
+  prospectos: 'crm',
+  clientes: 'clientes',
+  tecnicos: 'admin', 'chamados-admin': 'admin', logs: 'admin', 'usuarios-erp': 'admin'
+};
+
+function _erpTemPermissao(modulo) {
+  if (!_erpPerfil) return false;
+  if (_erpPerfil.acesso_total) return true;
+  return !!(_erpPerfil.permissoes && _erpPerfil.permissoes[modulo]);
+}
+
+function _erpAplicarPermissoes() {
+  var master = _erpPerfil && _erpPerfil.acesso_total;
+  document.querySelectorAll('.sidebar-group').forEach(function (g) {
+    var modulo = g.getAttribute('data-modulo');
+    if (!modulo) return; // grupo sempre visível (Início)
+    g.style.display = (master || _erpTemPermissao(modulo)) ? '' : 'none';
+  });
+}
 
 async function sf(path, opts) {
   const res = await _sfRaw(path, opts);
@@ -61,10 +88,11 @@ async function _tentarRefresh() {
 }
 
 function erpLogoutExpired() {
-  _erpTok = null; _erpRefresh = null; _erpNome = '';
+  _erpTok = null; _erpRefresh = null; _erpNome = ''; _erpPerfil = null;
   localStorage.removeItem('erp_tok');
   localStorage.removeItem('erp_refresh');
   localStorage.removeItem('erp_nome');
+  localStorage.removeItem('erp_perfil');
   document.getElementById('erp-app').style.display = 'none';
   document.getElementById('erp-login').style.display = 'flex';
   document.getElementById('l-email').value = '';
@@ -112,7 +140,7 @@ async function erpLogin() {
     _erpRefresh = authData.refresh_token || null;
     const uid = authData.user && authData.user.id;
 
-    const profileRes = await _sfRaw('/rest/v1/profiles?id=eq.' + uid + '&select=role');
+    const profileRes = await _sfRaw('/rest/v1/profiles?id=eq.' + uid + '&select=role,nome,email,acesso_total,permissoes');
     const profile = Array.isArray(profileRes.data) ? profileRes.data[0] : null;
 
     if (!profile || profile.role !== 'admin') {
@@ -122,10 +150,25 @@ async function erpLogin() {
       return;
     }
 
-    _erpNome = (authData.user && authData.user.email) || email;
+    const emailReal = (authData.user && authData.user.email) || email;
+    _erpNome = profile.nome || emailReal;
+    _erpPerfil = {
+      id: uid,
+      nome: profile.nome || null,
+      email: profile.email || emailReal,
+      acesso_total: !!profile.acesso_total,
+      permissoes: profile.permissoes || {}
+    };
+
+    // Autopreenche o e-mail em profiles caso ainda não tenha sido migrado (usuários antigos)
+    if (!profile.email) {
+      sf('/rest/v1/profiles?id=eq.' + uid, { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ email: emailReal }) });
+    }
+
     localStorage.setItem('erp_tok', _erpTok);
     localStorage.setItem('erp_refresh', _erpRefresh || '');
     localStorage.setItem('erp_nome', _erpNome);
+    localStorage.setItem('erp_perfil', JSON.stringify(_erpPerfil));
 
     _mostrarApp();
   } catch (e) {
@@ -135,10 +178,11 @@ async function erpLogin() {
 }
 
 function erpLogout() {
-  _erpTok = null; _erpRefresh = null; _erpNome = '';
+  _erpTok = null; _erpRefresh = null; _erpNome = ''; _erpPerfil = null;
   localStorage.removeItem('erp_tok');
   localStorage.removeItem('erp_refresh');
   localStorage.removeItem('erp_nome');
+  localStorage.removeItem('erp_perfil');
   document.getElementById('erp-app').style.display = 'none';
   document.getElementById('erp-login').style.display = 'flex';
   document.getElementById('l-email').value = '';
@@ -151,16 +195,26 @@ function _mostrarApp() {
   document.getElementById('erp-login').style.display = 'none';
   document.getElementById('erp-app').style.display = 'flex';
   document.getElementById('erp-user-nome').textContent = _erpNome;
-  erpShowView('pecas');
+  _erpAplicarPermissoes();
+  erpShowView('dashboard');
   verificarAlertasAutomatico();
 }
 
 function erpShowView(view) {
+  var modulo = _ERP_VIEW_MODULO[view];
+  if (modulo && !_erpTemPermissao(modulo)) {
+    _erpMsgAcesso = 'Acesso não autorizado.';
+    erpShowView('dashboard');
+    return;
+  }
+
   document.querySelectorAll('.erp-view').forEach(function (el) { el.classList.remove('active'); });
   document.querySelectorAll('.nav-item').forEach(function (el) { el.classList.remove('active'); });
   document.getElementById('view-' + view).classList.add('active');
-  document.getElementById('nav-' + view).classList.add('active');
-  if (view === 'pecas') carregarPecas();
+  var navEl = document.getElementById('nav-' + view);
+  if (navEl) navEl.classList.add('active');
+  if (view === 'dashboard') carregarDashboard();
+  else if (view === 'pecas') carregarPecas();
   else if (view === 'insumos') carregarInsumos();
   else if (view === 'tecnicos') erpTecCarregar();
   else if (view === 'chamados-admin') { erpTecAtualizarFiltro(); erpChamCarregar(); }
@@ -177,6 +231,7 @@ function erpShowView(view) {
   else if (view === 'equipamentos') carregarEquipamentos();
   else if (view === 'boletos') carregarBoletos();
   else if (view === 'logs') carregarLogs();
+  else if (view === 'usuarios-erp') erpUsuariosCarregar();
 }
 
 function fecharModal(id) {
@@ -215,10 +270,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const tok = localStorage.getItem('erp_tok');
   const refresh = localStorage.getItem('erp_refresh');
   const nome = localStorage.getItem('erp_nome');
+  const perfilRaw = localStorage.getItem('erp_perfil');
   if (tok) {
     _erpTok = tok;
     _erpRefresh = refresh || null;
     _erpNome = nome || '';
+    if (perfilRaw) { try { _erpPerfil = JSON.parse(perfilRaw); } catch (e) { _erpPerfil = null; } }
     _mostrarApp();
   }
 

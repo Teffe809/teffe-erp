@@ -23,7 +23,9 @@ var _ERP_VIEW_MODULO = {
   'fin-dashboard': 'financeiro', receber: 'financeiro', pagar: 'financeiro', boletos: 'financeiro', fluxo: 'financeiro',
   prospectos: 'crm',
   clientes: 'clientes',
-  tecnicos: 'admin', 'chamados-admin': 'admin', logs: 'admin', 'usuarios-erp': 'admin'
+  tecnicos: 'admin', 'chamados-admin': 'admin', logs: 'admin'
+  // 'usuarios-erp' não entra aqui de propósito: é restrita a acesso_total (master),
+  // não à permissão genérica 'admin' — ver checagem dedicada em erpShowView().
 };
 
 function _erpTemPermissao(modulo) {
@@ -38,6 +40,9 @@ function _erpAplicarPermissoes() {
     var modulo = g.getAttribute('data-modulo');
     if (!modulo) return; // grupo sempre visível (Início)
     g.style.display = (master || _erpTemPermissao(modulo)) ? '' : 'none';
+  });
+  document.querySelectorAll('[data-master-only]').forEach(function (el) {
+    el.style.display = master ? '' : 'none';
   });
 }
 
@@ -201,6 +206,12 @@ function _mostrarApp() {
 }
 
 function erpShowView(view) {
+  if (view === 'usuarios-erp' && !(_erpPerfil && _erpPerfil.acesso_total)) {
+    _erpMsgAcesso = 'Acesso não autorizado.';
+    erpShowView('dashboard');
+    return;
+  }
+
   var modulo = _ERP_VIEW_MODULO[view];
   if (modulo && !_erpTemPermissao(modulo)) {
     _erpMsgAcesso = 'Acesso não autorizado.';

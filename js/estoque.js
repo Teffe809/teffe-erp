@@ -2,6 +2,8 @@
    PEÇAS
 ═══════════════════════════════════════════════════════ */
 
+var _mpModelosSelecionados = []; // modelos marcados no checklist do modal de peça
+
 async function carregarPecas() {
   const wrap = document.querySelector('#view-pecas .table-wrap');
   wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
@@ -65,7 +67,42 @@ async function abrirModalPeca(p) {
   document.getElementById('mp-preco-venda').value = p ? (p.preco_venda || '') : '';
   document.getElementById('mp-fornecedor').value = p ? (p.fornecedor_id || '') : '';
   document.getElementById('mp-ativo').checked = p ? (p.ativo !== false) : true;
+
+  await _mpCarregarModelosChecklist(id || null);
+
   document.getElementById('modal-peca').classList.add('open');
+}
+
+// Checklist "esta peça serve para quais modelos?" — lista todos os modelos
+// já cadastrados em Equipamentos e marca os já vinculados (equipamento_pecas).
+async function _mpCarregarModelosChecklist(pecaId) {
+  var wrap = document.getElementById('mp-lista-modelos');
+  wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
+  try {
+    var modelos = await vmListarModelosExistentes();
+    var vinculados = [];
+    if (pecaId) {
+      var res = await sf('/rest/v1/equipamento_pecas?peca_id=eq.' + pecaId + '&select=modelo');
+      vinculados = (res.ok && Array.isArray(res.data)) ? res.data.map(function(l) { return l.modelo; }).filter(Boolean) : [];
+    }
+    _mpModelosSelecionados = vinculados.slice();
+
+    if (!modelos.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum modelo cadastrado em Equipamentos.</div>'; return; }
+
+    wrap.innerHTML = modelos.map(function(m) {
+      var checked = vinculados.indexOf(m) !== -1;
+      return '<label class="vm-check-item"><input type="checkbox" value="' + _esc(m) + '" ' + (checked ? 'checked' : '') + ' onchange="_mpToggleModelo(this.value,this.checked)"/> <span>' + _esc(m) + '</span></label>';
+    }).join('');
+  } catch(err) {
+    console.error('[_mpCarregarModelosChecklist]', err);
+    wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar modelos.</div>';
+  }
+}
+
+function _mpToggleModelo(modelo, checked) {
+  var idx = _mpModelosSelecionados.indexOf(modelo);
+  if (checked && idx === -1) _mpModelosSelecionados.push(modelo);
+  else if (!checked && idx !== -1) _mpModelosSelecionados.splice(idx, 1);
 }
 
 async function salvarPeca() {
@@ -89,10 +126,20 @@ async function salvarPeca() {
   if (id) {
     res = await sf('/rest/v1/pecas?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(payload) });
   } else {
-    res = await sf('/rest/v1/pecas', { method: 'POST', body: JSON.stringify(payload), headers: { 'Prefer': 'return=minimal' } });
+    res = await sf('/rest/v1/pecas', { method: 'POST', body: JSON.stringify(payload), headers: { 'Prefer': 'return=representation' } });
   }
 
   if (!res.ok) { alert('Erro ao salvar peça: ' + JSON.stringify(res.data)); return; }
+
+  var pecaId = id || (Array.isArray(res.data) && res.data[0] ? res.data[0].id : null);
+  if (pecaId) {
+    try {
+      await vmSincronizarPorItem('equipamento_pecas', 'peca_id', pecaId, _mpModelosSelecionados);
+    } catch (err) {
+      alert('Peça salva, mas houve erro ao salvar os modelos compatíveis: ' + err.message);
+    }
+  }
+
   fecharModal('modal-peca');
   carregarPecas();
 }

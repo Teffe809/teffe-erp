@@ -526,6 +526,10 @@
         <input type="checkbox" id="mp-ativo" checked/>
         <label for="mp-ativo">Peça ativa</label>
       </div>
+      <div class="fg">
+        <label>Modelos Compatíveis <small style="color:#9CA3AF;font-weight:400">— esta peça serve para quais modelos?</small></label>
+        <div id="mp-lista-modelos" class="vm-check-list" style="max-height:180px"><div class="tbl-loading">Carregando...</div></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-peca')">Cancelar</button>
@@ -1343,6 +1347,10 @@
         <div class="fg"><label>Qtd. Mínima</label><input id="mins-qtd-minima" type="number" min="0" value="1"/></div>
       </div>
       <div class="fg"><label>Observações</label><textarea id="mins-obs" rows="2" placeholder="Notas adicionais..."></textarea></div>
+      <div class="fg">
+        <label>Modelos Compatíveis <small style="color:#9CA3AF;font-weight:400">— este insumo serve para quais modelos?</small></label>
+        <div id="mins-lista-modelos" class="vm-check-list" style="max-height:180px"><div class="tbl-loading">Carregando...</div></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-insumo')">Cancelar</button>

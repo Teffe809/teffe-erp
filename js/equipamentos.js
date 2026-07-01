@@ -141,6 +141,17 @@ async function salvarEquipamento() {
   if (!marca)  { alert('Informe a marca.'); return; }
   if (!modelo) { alert('Informe o modelo.'); return; }
 
+  var modeloNormalizado = paraMaiusculo(modelo);
+
+  // Só interessa detectar modelo novo ao CRIAR um equipamento — se já existir
+  // outra unidade com esse modelo, os vínculos de insumos/peças já se aplicam
+  // automaticamente (o vínculo é por texto do modelo, não por equipamento_id).
+  var modeloEraNovo = false;
+  if (!id) {
+    var checkRes = await sf('/rest/v1/equipamentos?modelo=eq.' + encodeURIComponent(modeloNormalizado) + '&select=id&limit=1');
+    modeloEraNovo = !(checkRes.ok && Array.isArray(checkRes.data) && checkRes.data.length);
+  }
+
   var tipo = document.querySelector('input[name="meq-tipo-impressao"]:checked');
   var payload = {
     marca: paraMaiusculo(marca),
@@ -170,14 +181,17 @@ async function salvarEquipamento() {
     return;
   }
 
-  var equipamentoId = id || (Array.isArray(resData) && resData[0] ? resData[0].id : null);
-
   if (!id && Array.isArray(resData) && resData[0] && resData[0].codigo_teffe) {
     alert('Equipamento cadastrado!\nCódigo Teffe: ' + resData[0].codigo_teffe);
   }
 
   fecharModal('modal-equipamento');
   carregarEquipamentos();
+
+  if (modeloEraNovo) {
+    alert('Modelo novo detectado: "' + modeloNormalizado + '".\n\nVocê será levado à tela de Vínculo por Modelo para marcar os insumos e peças compatíveis com este modelo.');
+    await vmAbrirParaModeloNovo(modeloNormalizado);
+  }
 }
 
 async function excluirEquipamento(id) {

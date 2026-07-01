@@ -6,6 +6,7 @@
 ═══════════════════════════════════════════════════════ */
 
 var _insumosData = [];
+var _minsModelosSelecionados = []; // modelos marcados no checklist do modal de insumo
 
 async function carregarInsumos() {
   const wrap = document.getElementById('ins-table-wrap');
@@ -73,7 +74,41 @@ async function abrirModalInsumo(i) {
     sel.innerHTML = '<option value="">— Erro ao carregar —</option>';
   }
 
+  await _minsCarregarModelosChecklist(i ? i.id : null);
+
   document.getElementById('modal-insumo').classList.add('open');
+}
+
+// Checklist "este insumo serve para quais modelos?" — lista todos os modelos
+// já cadastrados em Equipamentos e marca os já vinculados (equipamento_insumos).
+async function _minsCarregarModelosChecklist(insumoId) {
+  var wrap = document.getElementById('mins-lista-modelos');
+  wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
+  try {
+    var modelos = await vmListarModelosExistentes();
+    var vinculados = [];
+    if (insumoId) {
+      var res = await sf('/rest/v1/equipamento_insumos?insumo_id=eq.' + insumoId + '&select=modelo');
+      vinculados = (res.ok && Array.isArray(res.data)) ? res.data.map(function(l) { return l.modelo; }).filter(Boolean) : [];
+    }
+    _minsModelosSelecionados = vinculados.slice();
+
+    if (!modelos.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum modelo cadastrado em Equipamentos.</div>'; return; }
+
+    wrap.innerHTML = modelos.map(function(m) {
+      var checked = vinculados.indexOf(m) !== -1;
+      return '<label class="vm-check-item"><input type="checkbox" value="' + _esc(m) + '" ' + (checked ? 'checked' : '') + ' onchange="_minsToggleModelo(this.value,this.checked)"/> <span>' + _esc(m) + '</span></label>';
+    }).join('');
+  } catch(err) {
+    console.error('[_minsCarregarModelosChecklist]', err);
+    wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar modelos.</div>';
+  }
+}
+
+function _minsToggleModelo(modelo, checked) {
+  var idx = _minsModelosSelecionados.indexOf(modelo);
+  if (checked && idx === -1) _minsModelosSelecionados.push(modelo);
+  else if (!checked && idx !== -1) _minsModelosSelecionados.splice(idx, 1);
 }
 
 async function salvarInsumo() {
@@ -95,9 +130,20 @@ async function salvarInsumo() {
 
   var method = id ? 'PATCH' : 'POST';
   var path   = id ? '/rest/v1/insumos?id=eq.' + id : '/rest/v1/insumos';
-  var { ok, data } = await sf(path, { method, headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify(payload) });
+  var prefer = id ? 'return=minimal' : 'return=representation';
+  var { ok, data } = await sf(path, { method, headers: { 'Prefer': prefer }, body: JSON.stringify(payload) });
 
   if (!ok) { alert('Erro ao salvar: ' + (data && data.message ? data.message : JSON.stringify(data))); return; }
+
+  var insumoId = id || (Array.isArray(data) && data[0] ? data[0].id : null);
+  if (insumoId) {
+    try {
+      await vmSincronizarPorItem('equipamento_insumos', 'insumo_id', insumoId, _minsModelosSelecionados);
+    } catch (err) {
+      alert('Insumo salvo, mas houve erro ao salvar os modelos compatíveis: ' + err.message);
+    }
+  }
+
   fecharModal('modal-insumo');
   carregarInsumos();
 }

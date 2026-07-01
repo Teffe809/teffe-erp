@@ -457,6 +457,15 @@
             <option value="concluido">Concluído</option>
             <option value="resolvido">Resolvido</option>
           </select>
+          <select id="cham-filtro-status-tecnico" onchange="erpChamCarregar()" style="width:170px">
+            <option value="">Todos (técnico)</option>
+            <option value="despachado">Despachado</option>
+            <option value="em_deslocamento">Em deslocamento</option>
+            <option value="em_atendimento">Em atendimento</option>
+            <option value="aguardando_peca">Aguardando peça</option>
+            <option value="pendente">Pendente</option>
+            <option value="encerrado">Encerrado (técnico)</option>
+          </select>
           <select id="cham-filtro-tec" onchange="erpChamCarregar()" style="width:170px">
             <option value="">Todos os técnicos</option>
             <option value="is_null">Sem técnico</option>

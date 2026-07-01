@@ -104,9 +104,9 @@ async function carregarReceber() {
   var clienteMap = {};
   var ids = [...new Set((Array.isArray(data) ? data : []).map(r => r.cliente_id).filter(Boolean))];
   if (ids.length) {
-    var cRes = await sf('/rest/v1/clientes?select=id,nome,empresa&id=in.(' + ids.join(',') + ')');
+    var cRes = await sf('/rest/v1/clientes?select=id,razao_social,fantasia&id=in.(' + ids.join(',') + ')');
     (Array.isArray(cRes.data) ? cRes.data : []).forEach(function(c) {
-      clienteMap[c.id] = c.nome || c.empresa || c.id;
+      clienteMap[c.id] = c.razao_social || c.fantasia || null;
     });
   }
 
@@ -118,7 +118,7 @@ async function carregarReceber() {
   if (!lista.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhuma conta encontrada.</div>'; return; }
 
   var rows = lista.map(function(r) {
-    var cli = clienteMap[r.cliente_id] || r.cliente_id || '—';
+    var cli = clienteMap[r.cliente_id] || (r.cliente_id ? 'Cliente não encontrado' : '—');
     var venc = r.vencimento ? new Date(r.vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
     var val = 'R$ ' + Number(r.valor).toFixed(2).replace('.', ',');
     var badge = '<span class="badge badge-' + r._efStatus + '">' + _fStatusLabel(r._efStatus) + '</span>';

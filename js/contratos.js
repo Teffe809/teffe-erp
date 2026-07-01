@@ -452,12 +452,12 @@ async function _carregarClientesSelect(selId) {
   const sel = document.getElementById(selId);
   if (!sel) return;
   sel.innerHTML = '<option value="">Carregando...</option>';
-  const { data } = await sf('/rest/v1/clientes?select=id,nome,empresa&order=nome.asc');
+  const { data } = await sf('/rest/v1/clientes?select=id,razao_social,fantasia&order=razao_social.asc');
   sel.innerHTML = '<option value="">Selecione o cliente...</option>';
   (Array.isArray(data) ? data : []).forEach(function(c) {
     var opt = document.createElement('option');
     opt.value = c.id;
-    opt.textContent = c.empresa || c.nome || c.id;
+    opt.textContent = c.razao_social || c.fantasia || c.id;
     sel.appendChild(opt);
   });
 }

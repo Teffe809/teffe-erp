@@ -36,7 +36,7 @@ async function carregarDashboard() {
   var [contratosRes, chamadosRes, suprimentoRes, boletosRes, pecasRes, fechRes] = await Promise.all([
     sf('/rest/v1/contratos?select=id&status=eq.ativo'),
     sf('/rest/v1/chamados?select=id,status,status_tecnico&status=not.in.(' + ERP_STATUS_ENCERRADOS.join(',') + ')'),
-    sf('/rest/v1/solicitacoes_suprimento?select=id,status&status=not.in.(' + ERP_STATUS_SUPRIMENTO_TERMINAL.join(',') + ')'),
+    sf('/rest/v1/solicitacoes_suprimento?select=id,numero,status&status=not.in.(' + ERP_STATUS_SUPRIMENTO_TERMINAL.join(',') + ')'),
     sf('/rest/v1/boletos?select=id&status=eq.a_vencer'),
     sf('/rest/v1/pecas?select=id,estoque_atual,estoque_minimo&ativo=eq.true'),
     sf('/rest/v1/fechamentos_mensais?select=contrato_id&mes_referencia=gte.' + mesIni + '&mes_referencia=lt.' + proxMesIni)
@@ -45,12 +45,20 @@ async function carregarDashboard() {
   var contratosAtivosData = _dashArr(contratosRes);
   var chamadosNaoEncerrados = _dashArr(chamadosRes);
   var totalNaoEncerrados = chamadosNaoEncerrados.length;
-  // em_atendimento/em_deslocamento vivem em status_tecnico (coluna dedicada já usada
-  // pelo portal do técnico), não na coluna status geral do chamado.
-  var emAtendOuDeslocamento = chamadosNaoEncerrados.filter(function (c) {
-    return c.status_tecnico === 'em_atendimento' || c.status_tecnico === 'em_deslocamento';
+  // status_tecnico é a coluna dedicada já usada pelo portal do técnico (repo
+  // teffe-site) — 'em_atendimento' confirmado em produção. O mesmo critério
+  // é usado no filtro "cham-filtro-status-tecnico" de Admin > Chamados, pra
+  // que o card e o destino do clique sempre concordem.
+  var emAtendimento = chamadosNaoEncerrados.filter(function (c) {
+    return c.status_tecnico === 'em_atendimento';
   }).length;
-  var suprimentoAberto = _dashArr(suprimentoRes).length;
+  // Conta PEDIDOS distintos (numero), não linhas — um pedido pode ter vários
+  // itens (várias linhas com o mesmo numero, ver enviarSuprimento() em
+  // teffe-site), e a tela Admin > Solicitações de Suprimento também agrupa
+  // por numero. Sem isso os dois números nunca batem.
+  var suprimentoAberto = new Set(_dashArr(suprimentoRes).map(function (s) {
+    return s.numero != null ? s.numero : s.id;
+  })).size;
   var boletosAVencer = _dashArr(boletosRes).length;
   var pecasAlerta = _dashArr(pecasRes).filter(function (p) {
     return (p.estoque_atual != null ? p.estoque_atual : 0) <= (p.estoque_minimo || 0);
@@ -63,7 +71,7 @@ async function carregarDashboard() {
   var cards = [
     { icon: 'ti-headset', label: 'Total de Chamados', value: totalNaoEncerrados, click: 'abrirModalTotalChamados()', modulo: 'admin', cor: totalNaoEncerrados > 0 ? 'laranja' : 'green' },
     { icon: 'ti-package', label: 'Suprimento em Aberto', value: suprimentoAberto, view: 'solicitacoes-suprimento', modulo: 'admin', cor: suprimentoAberto > 0 ? 'laranja' : 'green' },
-    { icon: 'ti-car', label: 'Chamados em Atendimento', value: emAtendOuDeslocamento, view: 'chamados-admin', modulo: 'admin', cor: emAtendOuDeslocamento > 0 ? 'azul' : 'green' },
+    { icon: 'ti-car', label: 'Chamados em Atendimento', value: emAtendimento, click: 'irParaChamadosEmAtendimento()', modulo: 'admin', cor: emAtendimento > 0 ? 'azul' : 'green' },
     { icon: 'ti-receipt', label: 'Boletos a vencer', value: boletosAVencer, view: 'boletos', modulo: 'financeiro', cor: 'laranja' },
     { icon: 'ti-alert-triangle', label: 'Itens em alerta no estoque', value: pecasAlerta, view: 'alertas', modulo: 'estoque', cor: pecasAlerta > 0 ? 'red' : 'green' },
     { icon: 'ti-calendar-month', label: 'Fechamentos pendentes', value: fechamentosPendentes, click: 'irParaFechamentosPendentes()', modulo: 'operacional', cor: fechamentosPendentes > 0 ? 'orange' : 'green' }

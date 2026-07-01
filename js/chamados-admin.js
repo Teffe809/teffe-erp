@@ -2,6 +2,23 @@
    CHAMADOS — visão administrativa
 ═══════════════════════════════════════════════════════ */
 
+// Navegação a partir do card "Chamados em Atendimento" do dashboard — usa
+// exatamente o mesmo critério da contagem (status_tecnico='em_atendimento'),
+// pra card e destino nunca divergirem de novo. Os filtros são ajustados
+// ANTES de chamar erpShowView() (não depois) porque erpShowView já dispara
+// erpChamCarregar() internamente lendo o valor atual dos <select> — se
+// setássemos os filtros depois, teríamos duas buscas concorrentes disputando
+// qual renderiza a tabela por último.
+function irParaChamadosEmAtendimento() {
+  var statusSel = document.getElementById('cham-filtro-status');
+  if (statusSel) statusSel.value = 'todos';
+  var statusTecSel = document.getElementById('cham-filtro-status-tecnico');
+  if (statusTecSel) statusTecSel.value = 'em_atendimento';
+  erpShowView('chamados-admin');
+}
+
+var _erpChamData = []; // cache da última listagem carregada, pra abrir detalhe por id
+
 async function erpChamCarregar() {
   if (!_erpTecs.length) await erpTecCarregar();
 
@@ -9,7 +26,8 @@ async function erpChamCarregar() {
   if (!wrap) return;
   wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
 
-  const filtroStatus  = (document.getElementById('cham-filtro-status') || {}).value || '';
+  const filtroStatus     = (document.getElementById('cham-filtro-status') || {}).value || '';
+  const filtroStatusTec  = (document.getElementById('cham-filtro-status-tecnico') || {}).value || '';
   const filtroTec     = (document.getElementById('cham-filtro-tec')    || {}).value || '';
   const filtroCliente = (document.getElementById('cham-filtro-cliente') || {}).value || '';
   const filtroTipo    = (document.getElementById('cham-filtro-tipo')    || {}).value || '';
@@ -18,6 +36,7 @@ async function erpChamCarregar() {
 
   let q = '/rest/v1/chamados?select=*&order=created_at.desc';
   if (filtroStatus  && filtroStatus  !== 'todos') q += '&status=eq.' + filtroStatus;
+  if (filtroStatusTec) q += '&status_tecnico=eq.' + filtroStatusTec;
   if (filtroTipo    && filtroTipo    !== 'todos') q += '&tipo_chamado=eq.' + filtroTipo;
   if (filtroTec === 'is_null') q += '&tecnico_id=is.null';
   else if (filtroTec) q += '&tecnico_id=eq.' + filtroTec;
@@ -29,7 +48,8 @@ async function erpChamCarregar() {
   console.log('[erpChamCarregar] ok:', ok, '| status:', httpSt, '| rows:', data && data.length);
 
   if (!ok || !data) { wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar chamados (HTTP ' + httpSt + ').</div>'; return; }
-  if (!data.length) { wrap.innerHTML = '<div class="tbl-empty">Nenhum chamado encontrado com os filtros selecionados.</div>'; return; }
+  if (!data.length) { _erpChamData = []; wrap.innerHTML = '<div class="tbl-empty">Nenhum chamado encontrado com os filtros selecionados.</div>'; return; }
+  _erpChamData = data;
 
   // Batch load clientes
   var clienteMap = {};
@@ -71,7 +91,7 @@ async function erpChamCarregar() {
         return '<option value="' + t.id + '"' + (t.id === r.tecnico_id ? ' selected' : '') + '>' + _esc(t.nome) + '</option>';
       }).join('') + '</select>';
 
-    return '<tr style="cursor:pointer" onclick="erpChamAbrirDetalhe(' + JSON.stringify(JSON.stringify(r)) + ')">' +
+    return '<tr style="cursor:pointer" onclick="erpChamAbrirDetalhe(\'' + r.id + '\')">' +
       '<td><b>#' + (r.numero || r.id.slice(0,6)) + '</b></td>' +
       '<td><span>' + _esc(cliNome) + '</span>' + cliCodigo + '</td>' +
       '<td>' + tipoBadge + '</td>' +
@@ -126,8 +146,14 @@ async function erpChamConfirmarEntrega(id, tecnicoId, numChamado) {
 }
 
 // ── DETALHE CHAMADO ──
-async function erpChamAbrirDetalhe(jsonStr) {
-  const c = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+// Recebe o ID (não o objeto inteiro) e busca no cache _erpChamData — passar
+// o registro completo via JSON.stringify(JSON.stringify(...)) dentro de um
+// onclick="..." quebrava sempre que descricao/solicitante_nome tinha aspas:
+// o JSON escapado colide com o delimitador do próprio atributo HTML (aspas
+// duplas) e trunca a chamada, fazendo o clique na linha não abrir nada.
+async function erpChamAbrirDetalhe(id) {
+  const c = _erpChamData.find(function(r) { return r.id === id; });
+  if (!c) return;
   const corpo = document.getElementById('erp-cham-detalhe-corpo');
   corpo.innerHTML = '<div class="tbl-loading" style="padding:20px">Carregando detalhes...</div>';
   document.getElementById('modal-cham-detalhe').classList.add('open');
@@ -141,7 +167,7 @@ async function erpChamAbrirDetalhe(jsonStr) {
   const encerrado = ['encerrado','concluido','resolvido'].includes(c.status);
 
   // Carregar dados paralelos
-  var equipamento = null, clienteNome = '–', pecas = [];
+  var equipamento = null, clienteNome = '–', pecas = [], fotosTecnico = [];
 
   await Promise.all([
     // Equipamento
@@ -167,6 +193,10 @@ async function erpChamAbrirDetalhe(jsonStr) {
         }
         pecas = pRows.map(function(p) { return Object.assign({}, p, { _peca: pecaMap[p.peca_id] || null }); });
       }
+    }),
+    // Anexos (fotos que o técnico envia durante o atendimento)
+    sf('/rest/v1/chamado_fotos?chamado_id=eq.' + c.id + '&order=created_at&select=id,url').then(function(r) {
+      fotosTecnico = _arrOuVazio(r);
     })
   ]).catch(function() {});
 
@@ -204,16 +234,20 @@ async function erpChamAbrirDetalhe(jsonStr) {
       }).join('') + '</tbody></table></div>'
     : '';
 
-  // Fotos
-  var fotosArr = [];
-  try { fotosArr = Array.isArray(c.fotos) ? c.fotos : (c.fotos ? JSON.parse(c.fotos) : []); } catch(e) {}
-  var fotosHtml = fotosArr.length
-    ? '<div class="adm-det-section" style="margin-top:16px"><div class="adm-det-label" style="margin-bottom:8px">Fotos</div>' +
+  // Anexos: foto que o cliente envia ao abrir o chamado (chamados.imagem_url,
+  // gravada mas nunca exibida antes) + fotos do técnico (tabela chamado_fotos).
+  // O bloco antigo lia de "chamados.fotos", coluna que não existe — sempre
+  // ficava vazio.
+  var anexos = [];
+  if (c.imagem_url) anexos.push({ url: c.imagem_url, label: 'Enviada pelo cliente' });
+  fotosTecnico.forEach(function(f) { anexos.push({ url: f.url, label: 'Foto do técnico' }); });
+  var fotosHtml = anexos.length
+    ? '<div class="adm-det-section" style="margin-top:16px"><div class="adm-det-label" style="margin-bottom:8px">Anexos</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:8px">' +
-      fotosArr.map(function(url) {
-        return '<a href="' + _esc(url) + '" target="_blank"><img src="' + _esc(url) + '" style="width:100px;height:100px;object-fit:cover;border-radius:6px;border:1px solid #E5E7EB"/></a>';
+      anexos.map(function(a) {
+        return '<a href="' + _esc(a.url) + '" target="_blank" title="' + _esc(a.label) + '"><img src="' + _esc(a.url) + '" style="width:100px;height:100px;object-fit:cover;border-radius:6px;border:1px solid #E5E7EB"/></a>';
       }).join('') + '</div></div>'
-    : '';
+    : '<div class="adm-det-section" style="margin-top:16px"><div class="adm-det-label" style="margin-bottom:8px">Anexos</div><div style="font-size:13px;color:#9CA3AF">Nenhum anexo ainda.</div></div>';
 
   corpo.innerHTML =
     '<div class="adm-det-grid" style="grid-template-columns:1fr 1fr 1fr;gap:8px 16px;margin-bottom:16px">' +
@@ -247,6 +281,7 @@ async function erpChamAbrirDetalhe(jsonStr) {
     '</div>' +
 
     (c.descricao ? '<div class="adm-det-section"><div class="adm-det-label" style="margin-bottom:6px">Descrição do Defeito</div><div class="adm-det-text">' + _esc(c.descricao).replace(/\n/g,'<br>') + '</div></div>' : '') +
+    (c.observacoes_cliente ? '<div class="adm-det-section" style="margin-top:12px"><div class="adm-det-label" style="margin-bottom:6px">Observações do Cliente</div><div class="adm-det-text">' + _esc(c.observacoes_cliente).replace(/\n/g,'<br>') + '</div></div>' : '') +
     (encerrado && c.resolucao ? '<div class="adm-det-section" style="margin-top:12px"><div class="adm-det-label" style="margin-bottom:6px">Resolução do Técnico</div><div class="adm-det-text adm-det-resolucao">' + _esc(c.resolucao).replace(/\n/g,'<br>') + '</div></div>' : '') +
     pecasHtml +
     fotosHtml +

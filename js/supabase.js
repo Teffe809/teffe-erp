@@ -22,7 +22,7 @@ var ERP_STATUS_ENCERRADOS = ['encerrado', 'concluido', 'resolvido'];
 var ERP_STATUS_SUPRIMENTO_TERMINAL = ['despachado', 'entregue', 'encerrado', 'cancelado'];
 
 var _ERP_VIEW_MODULO = {
-  pecas: 'estoque', insumos: 'estoque', fornecedores: 'estoque', entradas: 'estoque', alertas: 'estoque', equipamentos: 'estoque',
+  pecas: 'estoque', insumos: 'estoque', fornecedores: 'estoque', entradas: 'estoque', alertas: 'estoque', equipamentos: 'estoque', 'vinculo-modelo': 'estoque',
   contratos: 'comercial',
   fechamentos: 'operacional',
   'fin-dashboard': 'financeiro', receber: 'financeiro', pagar: 'financeiro', boletos: 'financeiro', fluxo: 'financeiro',
@@ -237,6 +237,7 @@ function erpShowView(view) {
   else if (view === 'fornecedores') carregarFornecedores();
   else if (view === 'entradas') carregarEntradas();
   else if (view === 'alertas') carregarAlertas();
+  else if (view === 'vinculo-modelo') carregarVinculoModelo();
   else if (view === 'contratos') carregarContratos();
   else if (view === 'fin-dashboard') carregarDashboardFin();
   else if (view === 'receber') carregarReceber();

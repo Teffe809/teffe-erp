@@ -78,6 +78,9 @@
           <i class="ti ti-alert-triangle"></i> <span class="nav-label">Alertas</span>
           <span class="nav-badge" id="nav-alertas-badge"></span>
         </button>
+        <button class="nav-item" id="nav-vinculo-modelo" onclick="erpShowView('vinculo-modelo')">
+          <i class="ti ti-link"></i> <span class="nav-label">Vínculo por Modelo</span>
+        </button>
       </div>
 
       <div class="sidebar-group" data-modulo="comercial">
@@ -211,6 +214,34 @@
           <button class="btn-danger" id="btn-alertas-email" onclick="enviarAlertaEmail()"><i class="ti ti-mail"></i> Enviar alerta por e-mail</button>
         </div>
         <div id="alertas-content"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- VÍNCULO POR MODELO -->
+      <div class="erp-view" id="view-vinculo-modelo">
+        <div class="view-header">
+          <h1><i class="ti ti-link"></i> Vínculo de Insumos/Peças por Modelo</h1>
+        </div>
+        <div class="fg" style="max-width:420px">
+          <label>Modelo do Equipamento</label>
+          <select id="vm-modelo" onchange="vmCarregarVinculos()">
+            <option value="">Carregando modelos...</option>
+          </select>
+        </div>
+        <div id="vm-conteudo" style="display:none;margin-top:20px">
+          <div class="modal-grid-2" style="align-items:start;gap:24px">
+            <div>
+              <h3 style="font-size:14px;color:var(--azul);margin-bottom:10px"><i class="ti ti-droplet"></i> Insumos Compatíveis <small style="color:#9CA3AF;font-weight:400">(visível ao cliente ao abrir chamado de suprimento)</small></h3>
+              <div id="vm-lista-insumos" class="vm-check-list"></div>
+            </div>
+            <div>
+              <h3 style="font-size:14px;color:var(--azul);margin-bottom:10px"><i class="ti ti-puzzle"></i> Peças Compatíveis <small style="color:#9CA3AF;font-weight:400">(visível ao técnico ao solicitar peça)</small></h3>
+              <div id="vm-lista-pecas" class="vm-check-list"></div>
+            </div>
+          </div>
+          <div style="margin-top:20px">
+            <button class="btn-primary" id="vm-btn-salvar" onclick="vmSalvarVinculos()"><i class="ti ti-device-floppy"></i> Salvar Vínculos</button>
+          </div>
+        </div>
       </div>
 
       <!-- CONTRATOS -->
@@ -588,14 +619,10 @@
         <div class="fg"><label>Último Contador</label><input id="meq-ultimo-contador" type="number" min="0" value="0"/></div>
       </div>
       <div class="fg"><label>Observações</label><textarea id="meq-obs" placeholder="Informações adicionais..." rows="2"></textarea></div>
-      <!-- Insumos Compatíveis -->
-      <div style="border-top:1px solid #E5E7EB;margin-top:16px;padding-top:14px">
-        <label style="font-weight:600;font-size:14px;display:block;margin-bottom:8px"><i class="ti ti-droplet"></i> Insumos Compatíveis</label>
-        <div style="display:flex;gap:6px;margin-bottom:6px">
-          <input id="meq-insumo-busca" type="text" placeholder="Buscar insumo por nome ou código..." style="flex:1" oninput="meqBuscarInsumo()"/>
-        </div>
-        <div id="meq-insumo-resultado" style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:6px;max-height:160px;overflow-y:auto;display:none;margin-bottom:6px"></div>
-        <div id="meq-insumo-lista"></div>
+      <div style="border-top:1px solid #E5E7EB;margin-top:16px;padding-top:14px;font-size:12.5px;color:#6B7280">
+        <i class="ti ti-info-circle"></i> Insumos e peças compatíveis são vinculados por <strong>modelo</strong> em
+        <a href="#" onclick="fecharModal('modal-equipamento');erpShowView('vinculo-modelo');return false;">Estoque → Vínculo por Modelo</a>
+        — a associação vale para todas as unidades deste modelo.
       </div>
     </div>
     <div class="modal-footer">
@@ -1392,6 +1419,7 @@
 <script src="js/crm.js"></script>
 <script src="js/clientes.js"></script>
 <script src="js/equipamentos.js"></script>
+<script src="js/vinculo-modelo.js"></script>
 <script src="js/boletos.js"></script>
 <script src="js/tecnicos.js"></script>
 <script src="js/chamados-admin.js"></script>

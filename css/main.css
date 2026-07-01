@@ -127,14 +127,6 @@ body{font-family:var(--font);background:var(--bg);color:#1a1a2e;font-size:14px;}
 .row-vencendo td{background:#EEF3FB !important;}
 .row-atrasado td{background:#FEF2F2 !important;}
 
-/* ── BADGES STATUS CHAMADO ── */
-.badge-aberto{background:#FEF3C7;color:#92400E;}
-.badge-em_deslocamento{background:#E0E7FF;color:#3730A3;}
-.badge-em_atendimento{background:#FFEDD5;color:#C2410C;}
-.badge-andamento{background:#0A4B8D;color:#fff;}
-.badge-concluido{background:#DCFCE7;color:#166534;}
-.badge-resolvido{background:#D1FAE5;color:#065F46;}
-
 /* ── DASHBOARD FINANCEIRO ── */
 .fin-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
 .fin-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:20px;}

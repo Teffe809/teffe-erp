@@ -28,7 +28,7 @@ async function carregarDashboard() {
 
   var [contratosRes, chamadosRes, suprimentoRes, boletosRes, pecasRes, fechRes] = await Promise.all([
     sf('/rest/v1/contratos?select=id&status=eq.ativo'),
-    sf('/rest/v1/chamados?select=id,status&status=not.in.(' + ERP_STATUS_ENCERRADOS.join(',') + ')'),
+    sf('/rest/v1/chamados?select=id,status,status_tecnico&status=not.in.(' + ERP_STATUS_ENCERRADOS.join(',') + ')'),
     sf('/rest/v1/solicitacoes_suprimento?select=id,status&status=not.in.(' + ERP_STATUS_SUPRIMENTO_TERMINAL.join(',') + ')'),
     sf('/rest/v1/boletos?select=id&status=eq.a_vencer'),
     sf('/rest/v1/pecas?select=id,estoque_atual,estoque_minimo&ativo=eq.true'),
@@ -38,8 +38,10 @@ async function carregarDashboard() {
   var contratosAtivosData = contratosRes.data || [];
   var chamadosNaoEncerrados = chamadosRes.data || [];
   var totalNaoEncerrados = chamadosNaoEncerrados.length;
+  // em_atendimento/em_deslocamento vivem em status_tecnico (coluna dedicada já usada
+  // pelo portal do técnico), não na coluna status geral do chamado.
   var emAtendOuDeslocamento = chamadosNaoEncerrados.filter(function (c) {
-    return c.status === 'em_atendimento' || c.status === 'em_deslocamento';
+    return c.status_tecnico === 'em_atendimento' || c.status_tecnico === 'em_deslocamento';
   }).length;
   var suprimentoAberto = (suprimentoRes.data || []).length;
   var boletosAVencer = (boletosRes.data || []).length;

@@ -134,7 +134,7 @@ async function erpChamAbrirDetalhe(jsonStr) {
 
   const fmt  = function(v) { return v ? new Date(v).toLocaleString('pt-BR') : '–'; };
   const fmtD = function(v) { return v ? new Date(v).toLocaleDateString('pt-BR') : '–'; };
-  const statusLabels = { aberto: 'Aberto', em_deslocamento: 'Em deslocamento', em_atendimento: 'Em atendimento', andamento: 'Em andamento', encerrado: 'Encerrado', concluido: 'Concluído', resolvido: 'Resolvido' };
+  const statusLabels = { aberto: 'Aberto', andamento: 'Em andamento', encerrado: 'Encerrado', concluido: 'Concluído', resolvido: 'Resolvido' };
   const prioLabels   = { baixa: 'Baixa', normal: 'Normal', alta: 'Alta', urgente: 'Urgente' };
   const tipoLabels   = { assistencia: 'Assistência Técnica', instalacao: 'Instalação', suprimento: 'Suprimento', preventiva: 'Preventiva', outro: 'Outro' };
   const tipoColor    = { assistencia: '#DC2626', instalacao: '#2563EB', suprimento: '#7C3AED', preventiva: '#059669', outro: '#9CA3AF' };
@@ -242,7 +242,7 @@ async function erpChamAbrirDetalhe(jsonStr) {
     '<div class="adm-det-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;gap:6px 16px;margin-bottom:14px">' +
       det('Abertura', fmt(c.created_at || c.data_abertura)) +
       det('Deslocamento', fmt(c.data_deslocamento)) +
-      det('Atendimento', fmt(c.data_atendimento)) +
+      det('Atendimento', fmt(c.data_atendimento_inicio)) +
       det('Encerramento', fmtD(c.data_fechamento)) +
     '</div>' +
 
@@ -442,7 +442,7 @@ function erpChamImprimirOS(c, clienteNome, equipamento, tecNome) {
   const fmt  = function(v) { return v ? new Date(v).toLocaleString('pt-BR') : '–'; };
   const fmtD = function(v) { return v ? new Date(v).toLocaleDateString('pt-BR') : '–'; };
   const esc  = function(v) { return (v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-  const statusLabels = { aberto: 'Aberto', em_deslocamento: 'Em deslocamento', em_atendimento: 'Em atendimento', andamento: 'Em andamento', encerrado: 'Encerrado', concluido: 'Concluído', resolvido: 'Resolvido' };
+  const statusLabels = { aberto: 'Aberto', andamento: 'Em andamento', encerrado: 'Encerrado', concluido: 'Concluído', resolvido: 'Resolvido' };
   const prioLabels   = { baixa: 'Baixa', normal: 'Normal', alta: 'Alta', urgente: 'Urgente' };
   const tipoLabels   = { assistencia: 'Assistência Técnica', instalacao: 'Instalação', suprimento: 'Suprimento', preventiva: 'Preventiva', outro: 'Outro' };
   const encerrado = ['encerrado','concluido','resolvido'].includes(c.status);
@@ -472,7 +472,7 @@ function erpChamImprimirOS(c, clienteNome, equipamento, tecNome) {
   const datasRows =
     row('Abertura', fmt(c.created_at || c.data_abertura)) +
     row('Deslocamento', fmt(c.data_deslocamento)) +
-    row('Atendimento', fmt(c.data_atendimento)) +
+    row('Atendimento', fmt(c.data_atendimento_inicio)) +
     row('Encerramento', fmtD(c.data_fechamento));
 
   const solicitanteRows =

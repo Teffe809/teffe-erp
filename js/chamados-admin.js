@@ -37,7 +37,7 @@ async function erpChamCarregar() {
     var cliIds = [...new Set(data.map(function(r) { return r.cliente_id; }).filter(Boolean))];
     if (cliIds.length) {
       var cr = await sf('/rest/v1/clientes?id=in.(' + cliIds.join(',') + ')&select=id,razao_social,fantasia,codigo');
-      (cr.data || []).forEach(function(c) { clienteMap[c.id] = c; });
+      _arrOuVazio(cr).forEach(function(c) { clienteMap[c.id] = c; });
     }
   } catch(e) {}
 
@@ -157,13 +157,13 @@ async function erpChamAbrirDetalhe(jsonStr) {
     }) : Promise.resolve(),
     // Peças utilizadas
     sf('/rest/v1/chamado_pecas?chamado_id=eq.' + c.id + '&select=*').then(async function(r) {
-      var pRows = r.data || [];
+      var pRows = _arrOuVazio(r);
       if (pRows.length) {
         var pecaIds = [...new Set(pRows.map(function(p) { return p.peca_id; }).filter(Boolean))];
         var pecaMap = {};
         if (pecaIds.length) {
           var pr = await sf('/rest/v1/pecas?id=in.(' + pecaIds.join(',') + ')&select=id,codigo,descricao,unidade');
-          (pr.data || []).forEach(function(p) { pecaMap[p.id] = p; });
+          _arrOuVazio(pr).forEach(function(p) { pecaMap[p.id] = p; });
         }
         pecas = pRows.map(function(p) { return Object.assign({}, p, { _peca: pecaMap[p.peca_id] || null }); });
       }

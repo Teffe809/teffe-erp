@@ -13,7 +13,11 @@ async function carregarFechamentosView() {
   wrap.innerHTML = '<div class="tbl-loading">Carregando...</div>';
 
   var fr = await sf('/rest/v1/fechamentos_mensais?select=*&order=mes_referencia.desc');
-  _fchTodos = fr.data || [];
+  if (!fr.ok || !Array.isArray(fr.data)) {
+    wrap.innerHTML = '<div class="tbl-empty">Erro ao carregar fechamentos.</div>';
+    return;
+  }
+  _fchTodos = fr.data;
 
   _fchContratosMap = {};
   _fchClientesMap = {};
@@ -23,13 +27,15 @@ async function carregarFechamentosView() {
 
   if (cIds.length) {
     var cr = await sf('/rest/v1/contratos?id=in.(' + cIds.join(',') + ')&select=*');
-    (cr.data || []).forEach(function(c) { _fchContratosMap[c.id] = c; });
+    var contratosData = (cr.ok && Array.isArray(cr.data)) ? cr.data : [];
+    contratosData.forEach(function(c) { _fchContratosMap[c.id] = c; });
 
     var cliIds = [];
-    (cr.data || []).forEach(function(c) { if (c.cliente_id && cliIds.indexOf(c.cliente_id) === -1) cliIds.push(c.cliente_id); });
+    contratosData.forEach(function(c) { if (c.cliente_id && cliIds.indexOf(c.cliente_id) === -1) cliIds.push(c.cliente_id); });
     if (cliIds.length) {
       var clr = await sf('/rest/v1/clientes?id=in.(' + cliIds.join(',') + ')&select=id,razao_social,fantasia,cidade,codigo');
-      (clr.data || []).forEach(function(cl) { _fchClientesMap[cl.id] = cl; });
+      var clientesData = (clr.ok && Array.isArray(clr.data)) ? clr.data : [];
+      clientesData.forEach(function(cl) { _fchClientesMap[cl.id] = cl; });
     }
   }
 
@@ -53,6 +59,20 @@ async function carregarFechamentosView() {
 
 function fchAplicarFiltros() {
   fchRenderizarTabela();
+}
+
+// Navegação a partir do card "Fechamentos pendentes" do dashboard — pré-filtra
+// pelo mês atual. carregarFechamentosView() roda de forma assíncrona (via
+// erpShowView), mas como só lemos/ajustamos o valor do <input type="month">
+// (elemento estático, já existe no DOM) antes de qualquer await interno dela
+// ceder o controle, não há corrida: quando ela chamar fchRenderizarTabela()
+// ao final, o filtro já estará com o mês atual selecionado.
+function irParaFechamentosPendentes() {
+  erpShowView('fechamentos');
+  var mesInput = document.getElementById('fch-filter-mes');
+  if (mesInput) mesInput.value = new Date().toISOString().slice(0, 7);
+  var boletoInput = document.getElementById('fch-filter-boleto');
+  if (boletoInput) boletoInput.value = '';
 }
 
 function fchRenderizarTabela() {
@@ -132,10 +152,10 @@ async function fchGerarExtrato(idx) {
   var equips = [];
   try {
     var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + c.id + '&select=equipamento_id');
-    var eqIds = (er.data || []).map(function(v) { return v.equipamento_id; }).filter(Boolean);
+    var eqIds = _arrOuVazio(er).map(function(v) { return v.equipamento_id; }).filter(Boolean);
     if (eqIds.length) {
       var eqRes = await sf('/rest/v1/equipamentos?id=in.(' + eqIds.join(',') + ')&select=id,marca,modelo,serial,codigo_teffe');
-      equips = eqRes.data || [];
+      equips = _arrOuVazio(eqRes);
     }
   } catch(e) {}
 
@@ -155,14 +175,14 @@ async function fchNovoFechamento() {
   sel.disabled = true;
 
   var cr = await sf('/rest/v1/contratos?status=eq.ativo&select=id,numero,cliente_id&order=numero.asc');
-  var contratos = cr.data || [];
+  var contratos = _arrOuVazio(cr);
 
   var cliIds = [];
   contratos.forEach(function(c) { if (c.cliente_id && cliIds.indexOf(c.cliente_id) === -1) cliIds.push(c.cliente_id); });
   var cliNomes = {};
   if (cliIds.length) {
     var clr = await sf('/rest/v1/clientes?id=in.(' + cliIds.join(',') + ')&select=id,razao_social');
-    (clr.data || []).forEach(function(cl) { cliNomes[cl.id] = cl.razao_social; });
+    _arrOuVazio(clr).forEach(function(cl) { cliNomes[cl.id] = cl.razao_social; });
   }
 
   contratos.forEach(function(c) {

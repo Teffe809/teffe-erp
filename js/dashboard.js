@@ -13,6 +13,13 @@ var _DASH_ACESSO_RAPIDO = [
   { view: 'prospectos', modulo: 'crm', label: 'CRM', icon: 'ti-users' }
 ];
 
+// Extrai o array de uma resposta de sf(); se a query falhar, o PostgREST
+// devolve um objeto de erro (truthy) em vez de array — "res.data || []" não
+// protege contra isso, então usamos essa checagem explícita em todo o painel.
+function _dashArr(res) {
+  return (res && res.ok && Array.isArray(res.data)) ? res.data : [];
+}
+
 async function carregarDashboard() {
   _dashRenderLogo();
   _dashRenderMsgAcesso();
@@ -35,31 +42,31 @@ async function carregarDashboard() {
     sf('/rest/v1/fechamentos_mensais?select=contrato_id&mes_referencia=gte.' + mesIni + '&mes_referencia=lt.' + proxMesIni)
   ]);
 
-  var contratosAtivosData = contratosRes.data || [];
-  var chamadosNaoEncerrados = chamadosRes.data || [];
+  var contratosAtivosData = _dashArr(contratosRes);
+  var chamadosNaoEncerrados = _dashArr(chamadosRes);
   var totalNaoEncerrados = chamadosNaoEncerrados.length;
   // em_atendimento/em_deslocamento vivem em status_tecnico (coluna dedicada já usada
   // pelo portal do técnico), não na coluna status geral do chamado.
   var emAtendOuDeslocamento = chamadosNaoEncerrados.filter(function (c) {
     return c.status_tecnico === 'em_atendimento' || c.status_tecnico === 'em_deslocamento';
   }).length;
-  var suprimentoAberto = (suprimentoRes.data || []).length;
-  var boletosAVencer = (boletosRes.data || []).length;
-  var pecasAlerta = (pecasRes.data || []).filter(function (p) {
+  var suprimentoAberto = _dashArr(suprimentoRes).length;
+  var boletosAVencer = _dashArr(boletosRes).length;
+  var pecasAlerta = _dashArr(pecasRes).filter(function (p) {
     return (p.estoque_atual != null ? p.estoque_atual : 0) <= (p.estoque_minimo || 0);
   }).length;
 
   var contratosComFechamento = {};
-  (fechRes.data || []).forEach(function (f) { if (f.contrato_id) contratosComFechamento[f.contrato_id] = true; });
+  _dashArr(fechRes).forEach(function (f) { if (f.contrato_id) contratosComFechamento[f.contrato_id] = true; });
   var fechamentosPendentes = contratosAtivosData.filter(function (c) { return !contratosComFechamento[c.id]; }).length;
 
   var cards = [
     { icon: 'ti-headset', label: 'Total de Chamados', value: totalNaoEncerrados, click: 'abrirModalTotalChamados()', modulo: 'admin', cor: totalNaoEncerrados > 0 ? 'laranja' : 'green' },
-    { icon: 'ti-package', label: 'Suprimento em Aberto', value: suprimentoAberto, view: 'chamados-admin', modulo: 'admin', cor: suprimentoAberto > 0 ? 'laranja' : 'green' },
+    { icon: 'ti-package', label: 'Suprimento em Aberto', value: suprimentoAberto, view: 'solicitacoes-suprimento', modulo: 'admin', cor: suprimentoAberto > 0 ? 'laranja' : 'green' },
     { icon: 'ti-car', label: 'Chamados em Atendimento', value: emAtendOuDeslocamento, view: 'chamados-admin', modulo: 'admin', cor: emAtendOuDeslocamento > 0 ? 'azul' : 'green' },
     { icon: 'ti-receipt', label: 'Boletos a vencer', value: boletosAVencer, view: 'boletos', modulo: 'financeiro', cor: 'laranja' },
     { icon: 'ti-alert-triangle', label: 'Itens em alerta no estoque', value: pecasAlerta, view: 'alertas', modulo: 'estoque', cor: pecasAlerta > 0 ? 'red' : 'green' },
-    { icon: 'ti-calendar-month', label: 'Fechamentos pendentes', value: fechamentosPendentes, view: 'fechamentos', modulo: 'operacional', cor: fechamentosPendentes > 0 ? 'orange' : 'green' }
+    { icon: 'ti-calendar-month', label: 'Fechamentos pendentes', value: fechamentosPendentes, click: 'irParaFechamentosPendentes()', modulo: 'operacional', cor: fechamentosPendentes > 0 ? 'orange' : 'green' }
   ];
 
   var permitidos = cards.filter(function (c) { return _erpTemPermissao(c.modulo); });

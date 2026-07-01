@@ -4,49 +4,107 @@
 
 var _tcCharts = {}; // instâncias Chart.js ativas, para destruir ao reabrir o modal
 
+// Extrai o array de uma resposta de sf(); se a query falhar (coluna/tabela
+// inexistente, RLS, CDN do Chart.js fora do ar etc.) o PostgREST devolve um
+// objeto de erro em vez de array — sem essa checagem, um .filter()/.map()
+// nesse objeto quebra silenciosamente e trava o modal em "Carregando..."
+// para sempre. Mesmo padrão de js/vinculo-modelo.js (_vmDataOuErro).
+function _tcDataOuErro(res, nomeConsulta) {
+  if (res && res.ok && Array.isArray(res.data)) return res.data;
+  var msg = (res && res.data && res.data.message) ? res.data.message : ('Falha ao consultar ' + nomeConsulta + '.');
+  throw new Error(msg);
+}
+
+// Lê o filtro de período direto do DOM (sem estado JS paralelo) — por padrão
+// mostra todos os chamados/suprimentos criados HOJE, qualquer status.
+function _tcCalcularPeriodo() {
+  var periodoSel = document.getElementById('tc-periodo');
+  var periodo = periodoSel ? periodoSel.value : 'hoje';
+  var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  var inicio, fim = new Date();
+
+  if (periodo === 'personalizado') {
+    var deStr = (document.getElementById('tc-data-de') || {}).value;
+    var ateStr = (document.getElementById('tc-data-ate') || {}).value;
+    inicio = deStr ? new Date(deStr + 'T00:00:00') : hoje;
+    fim = ateStr ? new Date(ateStr + 'T23:59:59.999') : fim;
+  } else if (periodo === '7dias') {
+    inicio = new Date(hoje); inicio.setDate(inicio.getDate() - 6);
+  } else if (periodo === '30dias') {
+    inicio = new Date(hoje); inicio.setDate(inicio.getDate() - 29);
+  } else { // hoje
+    inicio = hoje;
+  }
+  return { inicio: inicio, fim: fim };
+}
+
+function tcMudarPeriodo() {
+  var periodo = document.getElementById('tc-periodo').value;
+  var customWrap = document.getElementById('tc-periodo-custom');
+  if (customWrap) customWrap.style.display = periodo === 'personalizado' ? 'flex' : 'none';
+  if (periodo === 'personalizado') {
+    var de = document.getElementById('tc-data-de').value;
+    var ate = document.getElementById('tc-data-ate').value;
+    if (!de || !ate) return; // aguarda as duas datas antes de recarregar
+  }
+  abrirModalTotalChamados();
+}
+
 async function abrirModalTotalChamados() {
   document.getElementById('modal-total-chamados').classList.add('open');
   document.getElementById('tc-loading').style.display = 'block';
+  document.getElementById('tc-loading').textContent = 'Carregando...';
   document.getElementById('tc-conteudo').style.display = 'none';
 
-  var [chamRes, suprRes] = await Promise.all([
-    sf('/rest/v1/chamados?select=id,status,status_tecnico,tipo_chamado,tipo_servico,pecas_status,created_at,data_abertura,sla_pausado,sla_pausa_inicio,sla_tempo_pausado'),
-    sf('/rest/v1/solicitacoes_suprimento?select=id,status')
-  ]);
+  var periodo = _tcCalcularPeriodo();
+  var inicioISO = periodo.inicio.toISOString();
+  var fimISO = periodo.fim.toISOString();
 
-  var chamados = chamRes.data || [];
-  var suprimentos = suprRes.data || [];
+  try {
+    var resultados = await Promise.all([
+      sf('/rest/v1/chamados?select=id,status,status_tecnico,tipo_chamado,tipo_servico,pecas_status,created_at,data_abertura,sla_pausado,sla_pausa_inicio,sla_tempo_pausado&created_at=gte.' + inicioISO + '&created_at=lte.' + fimISO),
+      sf('/rest/v1/solicitacoes_suprimento?select=id,status,created_at&created_at=gte.' + inicioISO + '&created_at=lte.' + fimISO)
+    ]);
 
-  var naoEncerrados = chamados.filter(function (c) { return ERP_STATUS_ENCERRADOS.indexOf(c.status) === -1; });
-  // em_atendimento/em_deslocamento vivem em status_tecnico (coluna dedicada já usada
-  // pelo portal do técnico — repo teffe-site), não na coluna status geral do chamado.
-  var emAtendimento = naoEncerrados.filter(function (c) { return c.status_tecnico === 'em_atendimento'; }).length;
-  var emDeslocamento = naoEncerrados.filter(function (c) { return c.status_tecnico === 'em_deslocamento'; }).length;
+    var chamados = _tcDataOuErro(resultados[0], 'chamados');
+    var suprimentos = _tcDataOuErro(resultados[1], 'solicitacoes_suprimento');
 
-  var suprimentoAberto = suprimentos.filter(function (s) { return ERP_STATUS_SUPRIMENTO_TERMINAL.indexOf(s.status) === -1; }).length;
-  var suprimentoFaturado = suprimentos.filter(function (s) { return s.status === 'faturado'; }).length;
+    // Dentro/Fora do SLA só faz sentido para chamados ainda não encerrados.
+    var naoEncerrados = chamados.filter(function (c) { return ERP_STATUS_ENCERRADOS.indexOf(c.status) === -1; });
+    // em_atendimento/em_deslocamento vivem em status_tecnico (coluna dedicada já
+    // usada pelo portal do técnico — repo teffe-site), não na coluna status geral.
+    var emAtendimento = naoEncerrados.filter(function (c) { return c.status_tecnico === 'em_atendimento'; }).length;
+    var emDeslocamento = naoEncerrados.filter(function (c) { return c.status_tecnico === 'em_deslocamento'; }).length;
 
-  var dentroSla = 0, foraSla = 0;
-  naoEncerrados.forEach(function (c) { if (_slaChamadoDentro(c)) dentroSla++; else foraSla++; });
+    var suprimentoAberto = suprimentos.filter(function (s) { return ERP_STATUS_SUPRIMENTO_TERMINAL.indexOf(s.status) === -1; }).length;
+    var suprimentoFaturado = suprimentos.filter(function (s) { return s.status === 'faturado'; }).length;
 
-  _tcRenderKpis({
-    total: naoEncerrados.length,
-    emAtendimento: emAtendimento,
-    emDeslocamento: emDeslocamento,
-    suprimentoAberto: suprimentoAberto,
-    suprimentoFaturado: suprimentoFaturado
-  });
+    var dentroSla = 0, foraSla = 0;
+    naoEncerrados.forEach(function (c) { if (_slaChamadoDentro(c)) dentroSla++; else foraSla++; });
 
-  _tcRenderGraficos(chamados, dentroSla, foraSla);
+    _tcRenderKpis({
+      total: chamados.length, // todos os status no período selecionado
+      emAtendimento: emAtendimento,
+      emDeslocamento: emDeslocamento,
+      suprimentoAberto: suprimentoAberto,
+      suprimentoFaturado: suprimentoFaturado
+    });
 
-  document.getElementById('tc-loading').style.display = 'none';
-  document.getElementById('tc-conteudo').style.display = 'block';
+    _tcRenderGraficos(chamados, dentroSla, foraSla);
+
+    document.getElementById('tc-loading').style.display = 'none';
+    document.getElementById('tc-conteudo').style.display = 'block';
+  } catch (err) {
+    console.error('[abrirModalTotalChamados]', err);
+    document.getElementById('tc-loading').textContent = 'Erro ao carregar: ' + err.message;
+    document.getElementById('tc-conteudo').style.display = 'none';
+  }
 }
 
 function _tcRenderKpis(v) {
   var wrap = document.getElementById('tc-kpi-grid');
   var itens = [
-    { label: 'Total Não Encerrados', value: v.total },
+    { label: 'Total no Período', value: v.total },
     { label: 'Em Atendimento', value: v.emAtendimento },
     { label: 'Em Deslocamento', value: v.emDeslocamento },
     { label: 'Suprimento em Aberto', value: v.suprimentoAberto },
@@ -88,6 +146,11 @@ function _tcRenderGraficos(chamados, dentroSla, foraSla) {
     '<div class="tc-chart-card"><div class="tc-chart-title">Instalação por Status</div><canvas id="tc-chart-instalacao"></canvas></div>' +
     '<div class="tc-chart-card"><div class="tc-chart-title">Desinstalação por Status</div><canvas id="tc-chart-desinstalacao"></canvas></div>' +
     '<div class="tc-chart-card"><div class="tc-chart-title">Dentro do SLA × Fora do SLA</div><canvas id="tc-chart-sla"></canvas></div>';
+
+  if (typeof Chart === 'undefined') {
+    wrap.innerHTML = '<div class="tbl-empty">Não foi possível carregar a biblioteca de gráficos (Chart.js). Verifique sua conexão e recarregue a página.</div>';
+    return;
+  }
 
   ['assistencia', 'instalacao', 'desinstalacao'].forEach(function (tipo) {
     var id = 'tc-chart-' + tipo;

@@ -12,8 +12,8 @@ async function carregarDashboardFin() {
     sf('/rest/v1/financeiro_pagar?select=valor,vencimento,status&vencimento=gte.' + mesInicio + '&vencimento=lte.' + mesFim)
   ]);
 
-  const receber = recRes.data || [];
-  const pagar = pagRes.data || [];
+  const receber = _arrOuVazio(recRes);
+  const pagar = _arrOuVazio(pagRes);
   const hojeStr = hoje.toISOString().slice(0,10);
 
   const totalReceber = receber.filter(r => r.status !== 'cancelado').reduce((s,r) => s + Number(r.valor), 0);
@@ -61,8 +61,8 @@ async function _renderBarChart() {
   const results = await Promise.all(queries);
 
   const dados = results.map(function(r, i) {
-    var rec = (r[0].data || []).reduce((s,x) => s + Number(x.valor), 0);
-    var des = (r[1].data || []).reduce((s,x) => s + Number(x.valor), 0);
+    var rec = _arrOuVazio(r[0]).reduce((s,x) => s + Number(x.valor), 0);
+    var des = _arrOuVazio(r[1]).reduce((s,x) => s + Number(x.valor), 0);
     return { rec, des, mes: meses[i] };
   });
 
@@ -302,8 +302,8 @@ async function carregarFluxo() {
   var nomesMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
   var rows = results.map(function(r, i) {
-    var rec = (r[0].data || []).reduce((s,x) => s + Number(x.valor), 0);
-    var des = (r[1].data || []).reduce((s,x) => s + Number(x.valor), 0);
+    var rec = _arrOuVazio(r[0]).reduce((s,x) => s + Number(x.valor), 0);
+    var des = _arrOuVazio(r[1]).reduce((s,x) => s + Number(x.valor), 0);
     var saldo = rec - des;
     saldoAcum += saldo;
     var mes = nomesMes[periodos[i].m - 1] + '/' + periodos[i].y;

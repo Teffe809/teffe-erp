@@ -29,7 +29,7 @@ async function carregarContratos() {
     var clienteIds = [...new Set(data.map(function(c){ return c.cliente_id; }).filter(Boolean))];
     if (clienteIds.length) {
       var cr = await sf('/rest/v1/clientes?id=in.(' + clienteIds.join(',') + ')&select=id,razao_social,codigo');
-      (cr.data || []).forEach(function(cli) { clienteMap[cli.id] = cli; });
+      _arrOuVazio(cr).forEach(function(cli) { clienteMap[cli.id] = cli; });
     }
   } catch(e) { console.warn('[carregarContratos] erro ao carregar clientes:', e); }
 
@@ -126,7 +126,7 @@ async function abrirModalContrato(c) {
     } catch(e) { console.warn('[Contratos] erro ao carregar cliente:', e); }
     try {
       var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + c.id + '&select=equipamento_id');
-      var eqIds = (er.data || []).map(function(v) { return v.equipamento_id; }).filter(Boolean);
+      var eqIds = _arrOuVazio(er).map(function(v) { return v.equipamento_id; }).filter(Boolean);
       if (eqIds.length) {
         var eqRes = await sf('/rest/v1/equipamentos?id=in.(' + eqIds.join(',') + ')&select=*');
         _mcEquipamentos = Array.isArray(eqRes.data) ? eqRes.data : [];
@@ -490,7 +490,7 @@ async function _sincronizarEquipamentosContrato(contratoId, numero) {
   var existentes = [];
   try {
     var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + contratoId + '&select=equipamento_id');
-    existentes = (er.data || []).map(function(v){ return v.equipamento_id; });
+    existentes = _arrOuVazio(er).map(function(v){ return v.equipamento_id; });
   } catch(e) { console.warn('[_sincronizarEquipamentosContrato] erro ao carregar existentes:', e); }
 
   var novosIds = _mcEquipamentos.map(function(e){ return e.id; });
@@ -625,7 +625,7 @@ async function fcImprimirExtrato(idx) {
   var equips = [];
   try {
     var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + c.id + '&select=equipamento_id');
-    var eqIds = (er.data || []).map(function(v){ return v.equipamento_id; }).filter(Boolean);
+    var eqIds = _arrOuVazio(er).map(function(v){ return v.equipamento_id; }).filter(Boolean);
     if (eqIds.length) {
       var eqRes = await sf('/rest/v1/equipamentos?id=in.(' + eqIds.join(',') + ')&select=id,marca,modelo,serial,codigo_teffe');
       equips = Array.isArray(eqRes.data) ? eqRes.data : [];
@@ -790,7 +790,7 @@ async function fcAbrirNovoFechamento() {
   var equips = [];
   try {
     var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + c.id + '&select=equipamento_id');
-    var eqIds = (er.data || []).map(function(v) { return v.equipamento_id; }).filter(Boolean);
+    var eqIds = _arrOuVazio(er).map(function(v) { return v.equipamento_id; }).filter(Boolean);
     if (eqIds.length) {
       var eqRes = await sf('/rest/v1/equipamentos?id=in.(' + eqIds.join(',') + ')&select=id,marca,modelo,serial,codigo_teffe');
       equips = Array.isArray(eqRes.data) ? eqRes.data : [];
@@ -829,7 +829,7 @@ async function fcAbrirNovoFechamento() {
   if (c.tipo_contrato === 'locacao' && c.rollover_ativo) {
     rolloverEl.style.display = 'block';
     var rv = await sf('/rest/v1/rollover_creditos?contrato_id=eq.' + c.id + '&expirado=eq.false&validade=gte.' + hoje.toISOString().slice(0, 10) + '&select=paginas_credito,paginas_usadas&order=validade.asc');
-    var creditos = rv.data || [];
+    var creditos = _arrOuVazio(rv);
     var totalCredito = creditos.reduce(function(acc, cr) { return acc + (cr.paginas_credito - cr.paginas_usadas); }, 0);
     rolloverEl.innerHTML = '<div style="background:#EDE9FE;border:1px solid #C4B5FD;border-radius:6px;padding:8px 12px;font-size:13px"><strong>Rollover disponível:</strong> ' + totalCredito + ' páginas de crédito (' + creditos.length + ' lote(s))</div>';
   }
@@ -895,7 +895,7 @@ async function fcCalcular() {
     if (excedente > 0 && c.rollover_ativo) {
       var hoje = new Date();
       var rv = await sf('/rest/v1/rollover_creditos?contrato_id=eq.' + c.id + '&expirado=eq.false&validade=gte.' + hoje.toISOString().slice(0,10) + '&select=paginas_credito,paginas_usadas&order=validade.asc');
-      var creditos = rv.data || [];
+      var creditos = _arrOuVazio(rv);
       var restExc = excedente;
       for (var i = 0; i < creditos.length && restExc > 0; i++) {
         var disp = creditos[i].paginas_credito - creditos[i].paginas_usadas;
@@ -1026,7 +1026,7 @@ async function fcSalvarFechamento() {
   // Atualizar rollover — usar créditos mais antigos
   if (c.tipo_contrato === 'locacao' && c.rollover_ativo && rolloverUsado > 0) {
     var rv = await sf('/rest/v1/rollover_creditos?contrato_id=eq.' + c.id + '&expirado=eq.false&validade=gte.' + hoje.toISOString().slice(0,10) + '&select=*&order=validade.asc');
-    var creditos = rv.data || [];
+    var creditos = _arrOuVazio(rv);
     var restUsado = rolloverUsado;
     for (var i = 0; i < creditos.length && restUsado > 0; i++) {
       var cr = creditos[i];

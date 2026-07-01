@@ -9,6 +9,15 @@ function capitalizarNome(nome) {
 
 function paraMaiusculo(texto) { return texto ? texto.toUpperCase() : texto; }
 
+// Extrai o array de uma resposta de sf(); se a query falhar (coluna/tabela
+// inexistente, RLS etc.) o PostgREST devolve um objeto de erro (truthy) em vez
+// de array — "res.data || []" não protege contra isso, e um .map()/.forEach()
+// nesse objeto quebra silenciosamente. Usar em qualquer lugar que hoje faça
+// "(res.data || [])" antes de iterar o resultado.
+function _arrOuVazio(res) {
+  return (res && res.ok && Array.isArray(res.data)) ? res.data : [];
+}
+
 let _erpTok = null;
 let _erpRefresh = null;
 let _erpNome = '';
@@ -28,7 +37,7 @@ var _ERP_VIEW_MODULO = {
   'fin-dashboard': 'financeiro', receber: 'financeiro', pagar: 'financeiro', boletos: 'financeiro', fluxo: 'financeiro',
   prospectos: 'crm',
   clientes: 'clientes',
-  tecnicos: 'admin', 'chamados-admin': 'admin', logs: 'admin'
+  tecnicos: 'admin', 'chamados-admin': 'admin', logs: 'admin', 'solicitacoes-suprimento': 'admin'
   // 'usuarios-erp' não entra aqui de propósito: é restrita a acesso_total (master),
   // não à permissão genérica 'admin' — ver checagem dedicada em erpShowView().
 };
@@ -249,6 +258,8 @@ function erpShowView(view) {
   else if (view === 'boletos') carregarBoletos();
   else if (view === 'logs') carregarLogs();
   else if (view === 'usuarios-erp') erpUsuariosCarregar();
+  else if (view === 'fechamentos') carregarFechamentosView();
+  else if (view === 'solicitacoes-suprimento') carregarSolicitacoesSuprimento();
 }
 
 function fecharModal(id) {

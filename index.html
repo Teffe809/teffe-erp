@@ -6,7 +6,7 @@
 <title>ERP — Teffe Tecnologia</title>
 <link rel="stylesheet" href="css/main.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -137,6 +137,9 @@
         </button>
         <button class="nav-item" id="nav-chamados-admin" onclick="erpShowView('chamados-admin')">
           <i class="ti ti-headset"></i> <span class="nav-label">Chamados</span>
+        </button>
+        <button class="nav-item" id="nav-solicitacoes-suprimento" onclick="erpShowView('solicitacoes-suprimento')">
+          <i class="ti ti-package"></i> <span class="nav-label">Solicitações de Suprimento</span>
         </button>
         <button class="nav-item" id="nav-logs" onclick="erpShowView('logs')">
           <i class="ti ti-list-details"></i> <span class="nav-label">Logs</span>
@@ -482,6 +485,25 @@
           <input type="text" id="fil-log-user" oninput="carregarLogs()" placeholder="Filtrar por usuário" style="width:220px"/>
         </div>
         <div id="logs-wrap" class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
+      <!-- SOLICITAÇÕES DE SUPRIMENTO -->
+      <div class="erp-view" id="view-solicitacoes-suprimento">
+        <div class="view-header">
+          <h1><i class="ti ti-package"></i> Solicitações de Suprimento</h1>
+        </div>
+        <div class="view-filters">
+          <select id="fil-sup-status" onchange="carregarSolicitacoesSuprimento()">
+            <option value="">Todos os status</option>
+            <option value="aberto">Aberto</option>
+            <option value="faturado">Faturado</option>
+            <option value="despachado">Despachado</option>
+            <option value="entregue">Entregue</option>
+            <option value="encerrado">Encerrado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </div>
+        <div id="sup-table-wrap" class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
       </div>
 
       <!-- USUÁRIOS ERP -->
@@ -1406,6 +1428,20 @@
       <button class="modal-close" onclick="fecharModal('modal-total-chamados')">✕</button>
     </div>
     <div class="modal-body">
+      <div class="tc-periodo-bar">
+        <label class="tc-periodo-lbl">Período</label>
+        <select id="tc-periodo" onchange="tcMudarPeriodo()">
+          <option value="hoje">Hoje</option>
+          <option value="7dias">Últimos 7 dias</option>
+          <option value="30dias">Últimos 30 dias</option>
+          <option value="personalizado">Personalizado</option>
+        </select>
+        <div id="tc-periodo-custom" style="display:none">
+          <input type="date" id="tc-data-de" onchange="tcMudarPeriodo()"/>
+          <span>até</span>
+          <input type="date" id="tc-data-ate" onchange="tcMudarPeriodo()"/>
+        </div>
+      </div>
       <div id="tc-loading" class="tbl-loading">Carregando...</div>
       <div id="tc-conteudo" style="display:none">
         <div class="tc-kpi-grid" id="tc-kpi-grid"></div>
@@ -1423,6 +1459,7 @@
 <script src="js/insumos.js"></script>
 <script src="js/contratos.js"></script>
 <script src="js/fechamentos.js"></script>
+<script src="js/suprimentos-admin.js"></script>
 <script src="js/financeiro.js"></script>
 <script src="js/crm.js"></script>
 <script src="js/clientes.js"></script>

@@ -16,6 +16,11 @@ let _refreshando = false;
 let _erpPerfil = null; // { id, nome, email, acesso_total, permissoes }
 let _erpMsgAcesso = null;
 
+// Status terminais de chamados (chamado encerrado, nesta ou naquela forma)
+var ERP_STATUS_ENCERRADOS = ['encerrado', 'concluido', 'resolvido'];
+// Status terminais de uma solicitação de suprimento (já resolvida de algum jeito)
+var ERP_STATUS_SUPRIMENTO_TERMINAL = ['despachado', 'entregue', 'encerrado', 'cancelado'];
+
 var _ERP_VIEW_MODULO = {
   pecas: 'estoque', insumos: 'estoque', fornecedores: 'estoque', entradas: 'estoque', alertas: 'estoque', equipamentos: 'estoque',
   contratos: 'comercial',

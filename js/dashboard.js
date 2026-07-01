@@ -26,19 +26,22 @@ async function carregarDashboard() {
   var mesIni = hoje.toISOString().slice(0, 7) + '-01';
   var proxMesIni = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1).toISOString().slice(0, 10);
 
-  var [clientesRes, contratosRes, chamadosRes, boletosRes, pecasRes, fechRes] = await Promise.all([
-    sf('/rest/v1/clientes?select=id&ativo=eq.true'),
+  var [contratosRes, chamadosRes, suprimentoRes, boletosRes, pecasRes, fechRes] = await Promise.all([
     sf('/rest/v1/contratos?select=id&status=eq.ativo'),
-    sf('/rest/v1/chamados?select=id&status=eq.aberto'),
+    sf('/rest/v1/chamados?select=id,status&status=not.in.(' + ERP_STATUS_ENCERRADOS.join(',') + ')'),
+    sf('/rest/v1/solicitacoes_suprimento?select=id,status&status=not.in.(' + ERP_STATUS_SUPRIMENTO_TERMINAL.join(',') + ')'),
     sf('/rest/v1/boletos?select=id&status=eq.a_vencer'),
     sf('/rest/v1/pecas?select=id,estoque_atual,estoque_minimo&ativo=eq.true'),
     sf('/rest/v1/fechamentos_mensais?select=contrato_id&mes_referencia=gte.' + mesIni + '&mes_referencia=lt.' + proxMesIni)
   ]);
 
-  var clientesAtivos = (clientesRes.data || []).length;
   var contratosAtivosData = contratosRes.data || [];
-  var contratosAtivos = contratosAtivosData.length;
-  var chamadosAbertos = (chamadosRes.data || []).length;
+  var chamadosNaoEncerrados = chamadosRes.data || [];
+  var totalNaoEncerrados = chamadosNaoEncerrados.length;
+  var emAtendOuDeslocamento = chamadosNaoEncerrados.filter(function (c) {
+    return c.status === 'em_atendimento' || c.status === 'em_deslocamento';
+  }).length;
+  var suprimentoAberto = (suprimentoRes.data || []).length;
   var boletosAVencer = (boletosRes.data || []).length;
   var pecasAlerta = (pecasRes.data || []).filter(function (p) {
     return (p.estoque_atual != null ? p.estoque_atual : 0) <= (p.estoque_minimo || 0);
@@ -49,9 +52,9 @@ async function carregarDashboard() {
   var fechamentosPendentes = contratosAtivosData.filter(function (c) { return !contratosComFechamento[c.id]; }).length;
 
   var cards = [
-    { icon: 'ti-users', label: 'Clientes ativos', value: clientesAtivos, view: 'clientes', modulo: 'clientes', cor: 'azul' },
-    { icon: 'ti-file-text', label: 'Contratos ativos', value: contratosAtivos, view: 'contratos', modulo: 'comercial', cor: 'azul' },
-    { icon: 'ti-headset', label: 'Chamados abertos', value: chamadosAbertos, view: 'chamados-admin', modulo: 'admin', cor: chamadosAbertos > 0 ? 'laranja' : 'green' },
+    { icon: 'ti-headset', label: 'Total de Chamados', value: totalNaoEncerrados, click: 'abrirModalTotalChamados()', modulo: 'admin', cor: totalNaoEncerrados > 0 ? 'laranja' : 'green' },
+    { icon: 'ti-package', label: 'Suprimento em Aberto', value: suprimentoAberto, view: 'chamados-admin', modulo: 'admin', cor: suprimentoAberto > 0 ? 'laranja' : 'green' },
+    { icon: 'ti-car', label: 'Chamados em Atendimento', value: emAtendOuDeslocamento, view: 'chamados-admin', modulo: 'admin', cor: emAtendOuDeslocamento > 0 ? 'azul' : 'green' },
     { icon: 'ti-receipt', label: 'Boletos a vencer', value: boletosAVencer, view: 'boletos', modulo: 'financeiro', cor: 'laranja' },
     { icon: 'ti-alert-triangle', label: 'Itens em alerta no estoque', value: pecasAlerta, view: 'alertas', modulo: 'estoque', cor: pecasAlerta > 0 ? 'red' : 'green' },
     { icon: 'ti-calendar-month', label: 'Fechamentos pendentes', value: fechamentosPendentes, view: 'fechamentos', modulo: 'operacional', cor: fechamentosPendentes > 0 ? 'orange' : 'green' }
@@ -60,7 +63,8 @@ async function carregarDashboard() {
   var permitidos = cards.filter(function (c) { return _erpTemPermissao(c.modulo); });
 
   wrap.innerHTML = permitidos.length ? permitidos.map(function (c) {
-    return '<div class="dash-card" onclick="erpShowView(\'' + c.view + '\')">' +
+    var acao = c.click || ("erpShowView('" + c.view + "')");
+    return '<div class="dash-card" onclick="' + acao + '">' +
       '<div class="dash-card-ico ' + c.cor + '"><i class="ti ' + c.icon + '"></i></div>' +
       '<div><div class="dash-card-value">' + c.value + '</div><div class="dash-card-label">' + c.label + '</div></div>' +
       '</div>';

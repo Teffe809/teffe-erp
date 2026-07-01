@@ -6,6 +6,7 @@
 <title>ERP — Teffe Tecnologia</title>
 <link rel="stylesheet" href="css/main.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -417,6 +418,8 @@
           <select id="cham-filtro-status" onchange="erpChamCarregar()" style="width:150px">
             <option value="todos">Todos os status</option>
             <option value="aberto">Aberto</option>
+            <option value="em_deslocamento">Em deslocamento</option>
+            <option value="em_atendimento">Em atendimento</option>
             <option value="andamento">Em andamento</option>
             <option value="encerrado">Encerrado</option>
             <option value="concluido">Concluído</option>
@@ -1327,15 +1330,16 @@
 <div class="modal-overlay" id="modal-usuario-erp" onclick="if(event.target===this)fecharModal('modal-usuario-erp')">
   <div class="modal-box" style="width:560px;">
     <div class="modal-header">
-      <h2>Novo Usuário ERP</h2>
+      <h2 id="mue-titulo">Novo Usuário ERP</h2>
       <button class="modal-close" onclick="fecharModal('modal-usuario-erp')">✕</button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="mue-id"/>
       <div class="modal-grid-2">
         <div class="fg"><label>Nome *</label><input id="mue-nome" type="text" placeholder="Nome completo"/></div>
         <div class="fg"><label>E-mail *</label><input id="mue-email" type="email" placeholder="usuario@teffe.com.br"/></div>
       </div>
-      <div class="fg"><label>Senha Temporária *</label><input id="mue-senha" type="password" placeholder="Mínimo 6 caracteres"/></div>
+      <div class="fg"><label id="mue-senha-label">Senha Temporária *</label><input id="mue-senha" type="password" placeholder="Mínimo 6 caracteres"/></div>
       <div class="fg-check" style="margin-top:6px">
         <input type="checkbox" id="mue-acesso-total" onchange="mueToggleAcessoTotal()"/>
         <label for="mue-acesso-total"><strong>Acesso Total (Master)</strong> — acessa todos os módulos do ERP</label>
@@ -1361,6 +1365,26 @@
   </div>
 </div>
 
+<!-- ══════════════════════ MODAL TOTAL DE CHAMADOS ══════════════════════ -->
+<div class="modal-overlay" id="modal-total-chamados" onclick="if(event.target===this)fecharModal('modal-total-chamados')">
+  <div class="modal-box" style="width:96vw;max-width:1300px;max-height:92vh">
+    <div class="modal-header">
+      <h2><i class="ti ti-headset"></i> Total de Chamados — Painel Analítico</h2>
+      <button class="modal-close" onclick="fecharModal('modal-total-chamados')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="tc-loading" class="tbl-loading">Carregando...</div>
+      <div id="tc-conteudo" style="display:none">
+        <div class="tc-kpi-grid" id="tc-kpi-grid"></div>
+        <div class="tc-chart-grid" id="tc-chart-grid"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-total-chamados')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/supabase.js"></script>
 <script src="js/estoque.js"></script>
 <script src="js/insumos.js"></script>
@@ -1373,6 +1397,7 @@
 <script src="js/boletos.js"></script>
 <script src="js/tecnicos.js"></script>
 <script src="js/chamados-admin.js"></script>
+<script src="js/chamados-analytics.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/usuarios-erp.js"></script>
 <script>

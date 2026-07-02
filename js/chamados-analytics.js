@@ -178,8 +178,9 @@ function _tcRenderGraficos(chamados, dentroSla, foraSla) {
    real via sla_pausado/sla_pausa_inicio/sla_tempo_pausado (minutos acumulados). ── */
 
 // Minutos de SLA por tipo, mesmo mapa (TEC_SLA_MAP) do portal do técnico.
+// Prazo padrão: 12h úteis (720min) — antes 8h (480min).
 var TC_SLA_MINUTOS_POR_TIPO = {
-  corretiva: 480, assistencia: 480, instalacao: 480, desinstalacao: 480, troca_pecas: 480, troca_de_pecas: 480,
+  corretiva: 720, assistencia: 720, instalacao: 720, desinstalacao: 720, troca_pecas: 720, troca_de_pecas: 720,
   manutencao: 1440, manutencao_preventiva: 1440, vistoria: 1440, visita_tecnica: 1440
 };
 
@@ -215,7 +216,7 @@ function _slaChamadoDentro(chamado) {
   var abertura = chamado.data_abertura || chamado.created_at;
   if (!abertura) return true;
   var tipo = chamado.tipo_servico || chamado.tipo_chamado || '';
-  var limiteMin = TC_SLA_MINUTOS_POR_TIPO[tipo] || 480;
+  var limiteMin = TC_SLA_MINUTOS_POR_TIPO[tipo] || 720;
   var pausadoMin = chamado.sla_tempo_pausado || 0;
   if (chamado.sla_pausado && chamado.sla_pausa_inicio) {
     pausadoMin += Math.floor((new Date() - new Date(chamado.sla_pausa_inicio)) / 60000);

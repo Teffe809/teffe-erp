@@ -92,7 +92,7 @@ async function erpChamCarregar() {
       }).join('') + '</select>';
 
     return '<tr style="cursor:pointer" onclick="erpChamAbrirDetalhe(\'' + r.id + '\')">' +
-      '<td><b>#' + (r.numero || r.id.slice(0,6)) + '</b></td>' +
+      '<td><b>O.S. ' + (r.numero || r.id.slice(0,6)) + '</b></td>' +
       '<td><span>' + _esc(cliNome) + '</span>' + cliCodigo + '</td>' +
       '<td>' + tipoBadge + '</td>' +
       '<td class="adm-td-trunc" title="' + _esc((r.descricao||'').replace(/"/g,'&quot;')) + '">' + _esc(r.descricao || r.titulo || '–') + '</td>' +
@@ -138,8 +138,8 @@ async function erpChamConfirmarEntrega(id, tecnicoId, numChamado) {
   if (tecnicoId) {
     const tec = _erpTecs.find(function(t) { return t.id === tecnicoId; });
     if (tec && tec.email && _erpTok) {
-      const html = '<p>Olá <strong>' + (tec.nome ? capitalizarNome(tec.nome) : 'Técnico') + '</strong>,</p><p>As peças para o chamado <strong>#' + numChamado + '</strong> foram entregues. Por favor, acesse o portal e inicie o atendimento.</p><p>Atenciosamente,<br><strong>Teffe Tecnologia</strong></p>';
-      erpEnviarEmail(tec.email, 'Peças Disponíveis — Chamado #' + numChamado + ' — Teffe Tecnologia', html).catch(function() {});
+      const html = '<p>Olá <strong>' + (tec.nome ? capitalizarNome(tec.nome) : 'Técnico') + '</strong>,</p><p>As peças para o chamado <strong>O.S. ' + numChamado + '</strong> foram entregues. Por favor, acesse o portal e inicie o atendimento.</p><p>Atenciosamente,<br><strong>Teffe Tecnologia</strong></p>';
+      erpEnviarEmail(tec.email, 'Peças Disponíveis — Chamado O.S. ' + numChamado + ' — Teffe Tecnologia', html).catch(function() {});
     }
   }
   erpChamCarregar();
@@ -251,7 +251,7 @@ async function erpChamAbrirDetalhe(id) {
 
   corpo.innerHTML =
     '<div class="adm-det-grid" style="grid-template-columns:1fr 1fr 1fr;gap:8px 16px;margin-bottom:16px">' +
-      '<div class="adm-det-row"><span class="adm-det-label">Número</span><span class="adm-det-val" style="font-family:monospace;font-size:16px;font-weight:700">#' + (c.numero || c.id.slice(0,6)) + '</span></div>' +
+      '<div class="adm-det-row"><span class="adm-det-label">Número</span><span class="adm-det-val" style="font-family:monospace;font-size:16px;font-weight:700">O.S. ' + (c.numero || c.id.slice(0,6)) + '</span></div>' +
       '<div class="adm-det-row"><span class="adm-det-label">Status</span><span class="adm-det-val"><span class="badge badge-' + c.status + '">' + (statusLabels[c.status] || c.status) + '</span></span></div>' +
       '<div class="adm-det-row"><span class="adm-det-label">Tipo</span><span class="adm-det-val">' + tipoHtml + '</span></div>' +
       '<div class="adm-det-row"><span class="adm-det-label">Prioridade</span><span class="adm-det-val">' + (prioLabels[c.prioridade] || c.prioridade || '–') + '</span></div>' +
@@ -335,7 +335,7 @@ async function erpChamGerarBoletoAvulso(c, clienteNome) {
     headers: { 'Prefer': 'return=minimal' },
     body: JSON.stringify({
       cliente_id: c.cliente_id,
-      descricao: 'Chamado avulso #' + (c.numero || c.id.slice(0,6)) + (clienteNome ? ' — ' + clienteNome : ''),
+      descricao: 'Chamado avulso O.S. ' + (c.numero || c.id.slice(0,6)) + (clienteNome ? ' — ' + clienteNome : ''),
       valor: valor,
       vencimento: vencStr,
       status: 'a_vencer'
@@ -496,7 +496,7 @@ function erpChamImprimirOS(c, clienteNome, equipamento, tecNome) {
   }
 
   const dadosRows =
-    row('Número', '#' + num) +
+    row('Número', 'O.S. ' + num) +
     row('Status', statusLabels[c.status] || c.status) +
     row('Tipo', tipoLabels[c.tipo_chamado] || c.tipo_chamado || '') +
     row('Prioridade', prioLabels[c.prioridade] || c.prioridade || '') +
@@ -548,7 +548,7 @@ table.os-table td{padding:6px 10px;border:1px solid #D0D9EE;font-size:12px;}
 @media print{.os-btns{display:none!important;}body{padding:16px;}@page{size:A4;margin:15mm 14mm;}}`;
 
   const html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>' +
-    '<title>OS #' + num + ' — Teffe Tecnologia</title>' +
+    '<title>O.S. ' + num + ' — Teffe Tecnologia</title>' +
     '<style>' + css + '</style></head><body>' +
     '<div class="os-btns">' +
       '<button class="os-btn os-btn-close" onclick="window.close()">Fechar</button>' +
@@ -556,7 +556,7 @@ table.os-table td{padding:6px 10px;border:1px solid #D0D9EE;font-size:12px;}
     '</div>' +
     '<div class="os-header">' +
       '<img src="https://teffe.com.br/assets/images/logo-teffe.png" alt="Teffe Tecnologia"/>' +
-      '<div class="os-header-right"><div class="os-num">OS Nº ' + num + '</div><div class="os-sub">Teffe Tecnologia — Suporte e Assistência Técnica</div><div class="os-sub">Emitida em ' + new Date().toLocaleString('pt-BR') + '</div></div>' +
+      '<div class="os-header-right"><div class="os-num">O.S. ' + num + '</div><div class="os-sub">Teffe Tecnologia — Suporte e Assistência Técnica</div><div class="os-sub">Emitida em ' + new Date().toLocaleString('pt-BR') + '</div></div>' +
     '</div>' +
     '<div class="os-section"><div class="os-section-title">Dados do Chamado</div><table class="os-table">' + dadosRows + '</table></div>' +
     (datasRows ? '<div class="os-section"><div class="os-section-title">Datas</div><table class="os-table">' + datasRows + '</table></div>' : '') +

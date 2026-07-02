@@ -63,7 +63,7 @@ async function carregarSolicitacoesSuprimento() {
       var statusLabel = _SUP_STATUS_LABEL[g.status] || g.status || '—';
 
       return '<tr>' +
-        '<td><strong>#' + (g.numero != null ? g.numero : g.id.slice(0, 6)) + '</strong>' + (g._itens.length > 1 ? '<br><small style="color:#9CA3AF">' + g._itens.length + ' itens</small>' : '') + '</td>' +
+        '<td><strong>O.S. ' + (g.numero != null ? g.numero : g.id.slice(0, 6)) + '</strong>' + (g._itens.length > 1 ? '<br><small style="color:#9CA3AF">' + g._itens.length + ' itens</small>' : '') + '</td>' +
         '<td>' + _esc(cliNome) + '</td>' +
         '<td>' + _esc(eqNome) + '</td>' +
         '<td>' + itensHtml + '</td>' +

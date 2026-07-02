@@ -285,6 +285,12 @@ async function erpChamAbrirDetalhe(id) {
     (c.descricao ? '<div class="adm-det-section"><div class="adm-det-label" style="margin-bottom:6px">Descrição do Defeito</div><div class="adm-det-text">' + _esc(c.descricao).replace(/\n/g,'<br>') + '</div></div>' : '') +
     (c.observacoes_cliente ? '<div class="adm-det-section" style="margin-top:12px"><div class="adm-det-label" style="margin-bottom:6px">Observações do Cliente</div><div class="adm-det-text">' + _esc(c.observacoes_cliente).replace(/\n/g,'<br>') + '</div></div>' : '') +
     (encerrado && c.resolucao ? '<div class="adm-det-section" style="margin-top:12px"><div class="adm-det-label" style="margin-bottom:6px">Resolução do Técnico</div><div class="adm-det-text adm-det-resolucao">' + _esc(c.resolucao).replace(/\n/g,'<br>') + '</div></div>' : '') +
+    (encerrado && c.assinatura_cliente ?
+      '<div class="adm-det-section" style="margin-top:16px;text-align:center">' +
+        '<div class="adm-det-label" style="margin-bottom:8px">Assinatura do Cliente</div>' +
+        '<img src="' + c.assinatura_cliente + '" style="max-width:320px;width:100%;border:1px solid #E5E7EB;border-radius:8px;background:#fff"/>' +
+        '<div style="margin-top:6px;font-size:13px;font-weight:600;color:#374151;border-top:1px solid #D1D5DB;display:inline-block;padding-top:4px">' + _esc(c.nome_assinatura || '') + '</div>' +
+      '</div>' : '') +
     pecasHtml +
     fotosHtml +
     '<div class="adm-det-section" style="margin-top:16px;background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:9px;padding:12px 14px">' +

@@ -5,7 +5,7 @@
 var _DASH_ACESSO_RAPIDO = [
   { view: 'clientes', modulo: 'clientes', label: 'Clientes', icon: 'ti-building' },
   { view: 'contratos', modulo: 'comercial', label: 'Contratos', icon: 'ti-file-text' },
-  { view: 'chamados-admin', modulo: 'admin', label: 'Chamados', icon: 'ti-headset' },
+  { view: 'chamados-admin', modulo: 'chamados', label: 'Chamados', icon: 'ti-headset' },
   { view: 'boletos', modulo: 'financeiro', label: 'Boletos', icon: 'ti-receipt' },
   { view: 'fechamentos', modulo: 'operacional', label: 'Fechamentos', icon: 'ti-calendar-month' },
   { view: 'equipamentos', modulo: 'estoque', label: 'Equipamentos', icon: 'ti-printer' },
@@ -82,9 +82,9 @@ async function carregarDashboard() {
   var fechamentosPendentes = contratosAtivosData.filter(function (c) { return !contratosComFechamento[c.id]; }).length;
 
   var cards = [
-    { icon: 'ti-headset', label: 'Total de Chamados', value: totalGeralHoje, click: 'abrirModalTotalChamados()', modulo: 'admin', cor: totalGeralHoje > 0 ? 'laranja' : 'green' },
-    { icon: 'ti-package', label: 'Suprimento em Aberto', value: suprimentoAberto, view: 'solicitacoes-suprimento', modulo: 'admin', cor: suprimentoAberto > 0 ? 'laranja' : 'green' },
-    { icon: 'ti-car', label: 'Chamados em Atendimento', value: emAtendimento, click: 'irParaChamadosEmAtendimento()', modulo: 'admin', cor: emAtendimento > 0 ? 'azul' : 'green' },
+    { icon: 'ti-headset', label: 'Total de Chamados', value: totalGeralHoje, click: 'abrirModalTotalChamados()', modulo: 'chamados', cor: totalGeralHoje > 0 ? 'laranja' : 'green' },
+    { icon: 'ti-package', label: 'Suprimento em Aberto', value: suprimentoAberto, view: 'solicitacoes-suprimento', modulo: 'chamados', cor: suprimentoAberto > 0 ? 'laranja' : 'green' },
+    { icon: 'ti-car', label: 'Chamados em Atendimento', value: emAtendimento, click: 'irParaChamadosEmAtendimento()', modulo: 'chamados', cor: emAtendimento > 0 ? 'azul' : 'green' },
     { icon: 'ti-receipt', label: 'Boletos a vencer', value: boletosAVencer, view: 'boletos', modulo: 'financeiro', cor: 'laranja' },
     { icon: 'ti-alert-triangle', label: 'Itens em alerta no estoque', value: pecasAlerta, view: 'alertas', modulo: 'estoque', cor: pecasAlerta > 0 ? 'red' : 'green' },
     { icon: 'ti-calendar-month', label: 'Fechamentos pendentes', value: fechamentosPendentes, click: 'irParaFechamentosPendentes()', modulo: 'operacional', cor: fechamentosPendentes > 0 ? 'orange' : 'green' }

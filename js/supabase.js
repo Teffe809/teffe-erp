@@ -76,7 +76,12 @@ var _ERP_VIEW_MODULO = {
   'fin-dashboard': 'financeiro', receber: 'financeiro', pagar: 'financeiro', boletos: 'financeiro', fluxo: 'financeiro',
   prospectos: 'crm',
   clientes: 'clientes',
-  tecnicos: 'admin', 'chamados-admin': 'admin', logs: 'admin', 'solicitacoes-suprimento': 'admin'
+  tecnicos: 'admin', logs: 'admin',
+  // Chamados agora é um módulo de permissão próprio (Bloco K), separado de
+  // Admin — antes ficava junto com Técnicos/Logs, sem como conceder acesso
+  // a um sem conceder o outro. Solicitações de Suprimento entrou junto por
+  // ser operacionalmente a mesma coisa (chamado de suprimento).
+  'chamados-admin': 'chamados', 'solicitacoes-suprimento': 'chamados'
   // 'usuarios-erp' não entra aqui de propósito: é restrita a acesso_total (master),
   // não à permissão genérica 'admin' — ver checagem dedicada em erpShowView().
 };

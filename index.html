@@ -130,16 +130,20 @@
         </button>
       </div>
 
-      <div class="sidebar-group" data-modulo="admin">
-        <div class="sidebar-section">Admin</div>
-        <button class="nav-item" id="nav-tecnicos" onclick="erpShowView('tecnicos')">
-          <i class="ti ti-user-check"></i> <span class="nav-label">Técnicos</span>
-        </button>
+      <div class="sidebar-group" data-modulo="chamados">
+        <div class="sidebar-section">Chamados</div>
         <button class="nav-item" id="nav-chamados-admin" onclick="erpShowView('chamados-admin')">
           <i class="ti ti-headset"></i> <span class="nav-label">Chamados</span>
         </button>
         <button class="nav-item" id="nav-solicitacoes-suprimento" onclick="erpShowView('solicitacoes-suprimento')">
           <i class="ti ti-package"></i> <span class="nav-label">Solicitações de Suprimento</span>
+        </button>
+      </div>
+
+      <div class="sidebar-group" data-modulo="admin">
+        <div class="sidebar-section">Admin</div>
+        <button class="nav-item" id="nav-tecnicos" onclick="erpShowView('tecnicos')">
+          <i class="ti ti-user-check"></i> <span class="nav-label">Técnicos</span>
         </button>
         <button class="nav-item" id="nav-logs" onclick="erpShowView('logs')">
           <i class="ti ti-list-details"></i> <span class="nav-label">Logs</span>
@@ -1418,7 +1422,8 @@
           <label class="perm-check"><input type="checkbox" id="mue-perm-operacional"/> <span>Operacional<small>Fechamentos</small></span></label>
           <label class="perm-check"><input type="checkbox" id="mue-perm-crm"/> <span>CRM<small>Prospectos</small></span></label>
           <label class="perm-check"><input type="checkbox" id="mue-perm-clientes"/> <span>Clientes</span></label>
-          <label class="perm-check"><input type="checkbox" id="mue-perm-admin"/> <span>Admin<small>Técnicos, Chamados, Logs</small></span></label>
+          <label class="perm-check"><input type="checkbox" id="mue-perm-chamados"/> <span>Chamados<small>Admin &gt; Chamados, Solicitações de Suprimento</small></span></label>
+          <label class="perm-check"><input type="checkbox" id="mue-perm-admin"/> <span>Admin<small>Técnicos, Logs</small></span></label>
         </div>
       </div>
       <div id="mue-erro" style="display:none;color:#DC2626;font-size:13px;margin-top:10px"></div>

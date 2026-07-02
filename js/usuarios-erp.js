@@ -2,8 +2,8 @@
    USUÁRIOS ERP — controle de acesso por usuário
 ═══════════════════════════════════════════════════════ */
 
-var _ERP_PERM_MODULOS = ['estoque', 'comercial', 'financeiro', 'operacional', 'crm', 'clientes', 'admin'];
-var _ERP_PERM_LABELS = { estoque: 'Estoque', comercial: 'Comercial', financeiro: 'Financeiro', operacional: 'Operacional', crm: 'CRM', clientes: 'Clientes', admin: 'Admin' };
+var _ERP_PERM_MODULOS = ['estoque', 'comercial', 'financeiro', 'operacional', 'crm', 'clientes', 'chamados', 'admin'];
+var _ERP_PERM_LABELS = { estoque: 'Estoque', comercial: 'Comercial', financeiro: 'Financeiro', operacional: 'Operacional', crm: 'CRM', clientes: 'Clientes', chamados: 'Chamados', admin: 'Admin' };
 var _erpUsuarios = [];
 
 async function erpUsuariosCarregar() {

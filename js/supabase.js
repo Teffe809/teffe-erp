@@ -62,8 +62,12 @@ let _erpMsgAcesso = null;
 
 // Status terminais de chamados (chamado encerrado, nesta ou naquela forma)
 var ERP_STATUS_ENCERRADOS = ['encerrado', 'concluido', 'resolvido'];
-// Status terminais de uma solicitação de suprimento (já resolvida de algum jeito)
-var ERP_STATUS_SUPRIMENTO_TERMINAL = ['despachado', 'entregue', 'encerrado', 'cancelado'];
+// Status terminais de uma solicitação de suprimento (já resolvida de algum
+// jeito) — fluxo real (Bloco F): aberto -> faturado -> enviado. "faturado"
+// NÃO é terminal (ainda precisa ser despachado fisicamente); só "enviado"
+// encerra o pedido. despachado/entregue nunca chegaram a ser usados em
+// produção (sondagem confirmou 0 registros) — removidos daqui.
+var ERP_STATUS_SUPRIMENTO_TERMINAL = ['enviado', 'encerrado', 'cancelado'];
 
 var _ERP_VIEW_MODULO = {
   pecas: 'estoque', insumos: 'estoque', fornecedores: 'estoque', entradas: 'estoque', alertas: 'estoque', equipamentos: 'estoque', 'vinculo-modelo': 'estoque',

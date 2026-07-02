@@ -32,19 +32,32 @@ async function carregarDashboard() {
   var hoje = new Date();
   var mesIni = hoje.toISOString().slice(0, 7) + '-01';
   var proxMesIni = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 1).toISOString().slice(0, 10);
+  var hojeIniISO = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
 
-  var [contratosRes, chamadosRes, suprimentoRes, boletosRes, pecasRes, fechRes] = await Promise.all([
+  var [contratosRes, chamadosRes, suprimentoRes, boletosRes, pecasRes, fechRes, chamHojeRes, supHojeRes] = await Promise.all([
     sf('/rest/v1/contratos?select=id&status=eq.ativo'),
     sf('/rest/v1/chamados?select=id,status,status_tecnico&status=not.in.(' + ERP_STATUS_ENCERRADOS.join(',') + ')'),
     sf('/rest/v1/solicitacoes_suprimento?select=id,numero,status&status=not.in.(' + ERP_STATUS_SUPRIMENTO_TERMINAL.join(',') + ')'),
     sf('/rest/v1/boletos?select=id&status=eq.a_vencer'),
     sf('/rest/v1/pecas?select=id,estoque_atual,estoque_minimo&ativo=eq.true'),
-    sf('/rest/v1/fechamentos_mensais?select=contrato_id&mes_referencia=gte.' + mesIni + '&mes_referencia=lt.' + proxMesIni)
+    sf('/rest/v1/fechamentos_mensais?select=contrato_id&mes_referencia=gte.' + mesIni + '&mes_referencia=lt.' + proxMesIni),
+    // "Total de Chamados" (Bloco H): soma TODOS os tipos abertos HOJE
+    // (assistência, suprimento, instalação, desinstalação), independente de
+    // status — mesmo critério padrão ("hoje") do modal Painel Analítico.
+    sf('/rest/v1/chamados?select=id&created_at=gte.' + hojeIniISO),
+    sf('/rest/v1/solicitacoes_suprimento?select=id,numero&created_at=gte.' + hojeIniISO)
   ]);
 
   var contratosAtivosData = _dashArr(contratosRes);
   var chamadosNaoEncerrados = _dashArr(chamadosRes);
-  var totalNaoEncerrados = chamadosNaoEncerrados.length;
+  // Total de Chamados do dia: chamados (qualquer tipo) + pedidos de
+  // suprimento distintos (agrupados por numero, mesmo critério do card
+  // "Suprimento em Aberto" logo abaixo) criados hoje.
+  var totalChamadosHoje = _dashArr(chamHojeRes).length;
+  var totalSuprimentoHoje = new Set(_dashArr(supHojeRes).map(function (s) {
+    return s.numero != null ? s.numero : s.id;
+  })).size;
+  var totalGeralHoje = totalChamadosHoje + totalSuprimentoHoje;
   // status_tecnico é a coluna dedicada já usada pelo portal do técnico (repo
   // teffe-site) — 'em_atendimento' confirmado em produção. O mesmo critério
   // é usado no filtro "cham-filtro-status-tecnico" de Admin > Chamados, pra
@@ -69,7 +82,7 @@ async function carregarDashboard() {
   var fechamentosPendentes = contratosAtivosData.filter(function (c) { return !contratosComFechamento[c.id]; }).length;
 
   var cards = [
-    { icon: 'ti-headset', label: 'Total de Chamados', value: totalNaoEncerrados, click: 'abrirModalTotalChamados()', modulo: 'admin', cor: totalNaoEncerrados > 0 ? 'laranja' : 'green' },
+    { icon: 'ti-headset', label: 'Total de Chamados', value: totalGeralHoje, click: 'abrirModalTotalChamados()', modulo: 'admin', cor: totalGeralHoje > 0 ? 'laranja' : 'green' },
     { icon: 'ti-package', label: 'Suprimento em Aberto', value: suprimentoAberto, view: 'solicitacoes-suprimento', modulo: 'admin', cor: suprimentoAberto > 0 ? 'laranja' : 'green' },
     { icon: 'ti-car', label: 'Chamados em Atendimento', value: emAtendimento, click: 'irParaChamadosEmAtendimento()', modulo: 'admin', cor: emAtendimento > 0 ? 'azul' : 'green' },
     { icon: 'ti-receipt', label: 'Boletos a vencer', value: boletosAVencer, view: 'boletos', modulo: 'financeiro', cor: 'laranja' },

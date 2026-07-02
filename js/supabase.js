@@ -252,6 +252,85 @@ function _mostrarApp() {
   _erpAplicarPermissoes();
   erpShowView('dashboard');
   verificarAlertasAutomatico();
+  _erpIniciarAlertaNovoChamado();
+}
+
+// ── ALERTA DE NOVO CHAMADO (Bloco E) ──
+// Via polling (não Realtime): este ERP nunca carregou a SDK do Supabase
+// (usa só fetch cru via sf()), então usar postgres_changes exigiria
+// adicionar essa dependência só para isto. Testei a subscrição via um
+// script à parte e ela abre (status SUBSCRIBED), mas isso não garante que
+// a tabela está de fato na publicação supabase_realtime — só um INSERT
+// real confirmaria, e evitei inserir dado de teste em produção. Polling é
+// garantido: mesmo mecanismo (fetch + anon key) já usado no resto do app.
+var _erpAlertaUltimaVerificacao = null;
+var _erpAlertaVistos = {};
+
+function _erpIniciarAlertaNovoChamado() {
+  _erpAlertaUltimaVerificacao = new Date().toISOString();
+  _erpVerificarNovosChamados();
+  setInterval(_erpVerificarNovosChamados, 45000);
+}
+
+async function _erpVerificarNovosChamados() {
+  if (!_erpTok) return;
+  var desde = _erpAlertaUltimaVerificacao;
+  _erpAlertaUltimaVerificacao = new Date().toISOString();
+
+  var [chamRes, supRes] = await Promise.all([
+    sf('/rest/v1/chamados?select=id,numero,tipo_chamado,cliente_id,created_at&created_at=gt.' + encodeURIComponent(desde) + '&order=created_at.asc'),
+    sf('/rest/v1/solicitacoes_suprimento?select=id,numero,cliente_id,created_at&created_at=gt.' + encodeURIComponent(desde) + '&order=created_at.asc')
+  ]);
+
+  var novosChamados = _arrOuVazio(chamRes).filter(function(c) { return !_erpAlertaVistos[c.id]; });
+  novosChamados.forEach(function(c) { _erpAlertaVistos[c.id] = true; });
+
+  // Um pedido de suprimento pode gerar várias linhas com o mesmo numero
+  // (carrinho com vários itens) — agrupa antes de notificar, senão vira um
+  // toast por item.
+  var vistosNumero = {};
+  var novosSuprimento = _arrOuVazio(supRes).filter(function(s) {
+    if (_erpAlertaVistos[s.id]) return false;
+    _erpAlertaVistos[s.id] = true;
+    var chave = s.numero != null ? ('n' + s.numero) : ('r' + s.id);
+    if (vistosNumero[chave]) return false;
+    vistosNumero[chave] = true;
+    return true;
+  });
+
+  if (!novosChamados.length && !novosSuprimento.length) return;
+
+  var clienteIds = [...new Set(novosChamados.concat(novosSuprimento).map(function(x) { return x.cliente_id; }).filter(Boolean))];
+  var clienteMap = {};
+  if (clienteIds.length) {
+    var cr = await sf('/rest/v1/clientes?id=in.(' + clienteIds.join(',') + ')&select=id,razao_social,fantasia');
+    _arrOuVazio(cr).forEach(function(c) { clienteMap[c.id] = c.razao_social || c.fantasia || 'Cliente'; });
+  }
+
+  var tipoLabel = { assistencia: 'Assistência', instalacao: 'Instalação', suprimento: 'Suprimento', preventiva: 'Preventiva', outro: 'Chamado' };
+  novosChamados.forEach(function(c) {
+    var nome = clienteMap[c.cliente_id] || 'Cliente';
+    var tipo = tipoLabel[c.tipo_chamado] || 'Chamado';
+    _erpMostrarToast('Novo chamado aberto: O.S. ' + (c.numero != null ? c.numero : c.id.slice(0,6)) + ' — ' + tipo + ' — ' + nome, 'chamados-admin');
+  });
+  novosSuprimento.forEach(function(s) {
+    var nome = clienteMap[s.cliente_id] || 'Cliente';
+    _erpMostrarToast('Nova solicitação de suprimento: O.S. ' + (s.numero != null ? s.numero : s.id.slice(0,6)) + ' — ' + nome, 'solicitacoes-suprimento');
+  });
+}
+
+function _erpMostrarToast(texto, view) {
+  var container = document.getElementById('erp-toast-container');
+  if (!container) return;
+  var el = document.createElement('div');
+  el.style.cssText = 'background:#1A3F80;color:#fff;padding:12px 16px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:13px;cursor:pointer;animation:erpToastIn .25s ease-out;';
+  el.textContent = texto;
+  el.onclick = function() {
+    if (view) erpShowView(view);
+    el.remove();
+  };
+  container.appendChild(el);
+  setTimeout(function() { if (el.parentNode) el.remove(); }, 9000);
 }
 
 function erpShowView(view) {

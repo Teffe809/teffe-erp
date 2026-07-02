@@ -167,9 +167,11 @@ async function erpChamAbrirDetalhe(id) {
   const encerrado = ['encerrado','concluido','resolvido'].includes(c.status);
 
   // Carregar dados paralelos
-  var equipamento = null, clienteNome = '–', pecas = [], fotosTecnico = [];
+  var equipamento = null, clienteNome = '–', pecas = [], fotosTecnico = [], historico = [];
 
   await Promise.all([
+    // Histórico de mudanças de status
+    _erpBuscarHistoricoStatus(c.id, null).then(function(h) { historico = h; }),
     // Equipamento
     c.equipamento_id ? sf('/rest/v1/equipamentos?id=eq.' + c.equipamento_id + '&select=id,marca,modelo,serial,codigo_teffe').then(function(r) {
       equipamento = r.data && r.data[0] ? r.data[0] : null;
@@ -277,7 +279,7 @@ async function erpChamAbrirDetalhe(id) {
       det('Abertura', fmt(c.created_at || c.data_abertura)) +
       det('Deslocamento', fmt(c.data_deslocamento)) +
       det('Atendimento', fmt(c.data_atendimento_inicio)) +
-      det('Encerramento', fmtD(c.data_fechamento)) +
+      det('Encerramento', fmt(c.data_encerramento)) +
     '</div>' +
 
     (c.descricao ? '<div class="adm-det-section"><div class="adm-det-label" style="margin-bottom:6px">Descrição do Defeito</div><div class="adm-det-text">' + _esc(c.descricao).replace(/\n/g,'<br>') + '</div></div>' : '') +
@@ -458,7 +460,7 @@ async function erpChamSalvarNovo() {
 
   const { ok, data } = await sf('/rest/v1/chamados', {
     method: 'POST',
-    headers: { 'Prefer': 'return=minimal' },
+    headers: { 'Prefer': 'return=representation' },
     body: JSON.stringify(payload)
   });
   btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Criar Chamado';
@@ -467,6 +469,8 @@ async function erpChamSalvarNovo() {
     erroEl.textContent = data && data.message ? data.message : 'Erro ao criar chamado. Verifique permissões RLS.';
     return;
   }
+  var novoChamado = Array.isArray(data) && data[0] ? data[0] : null;
+  if (novoChamado) registrarHistoricoStatus({ chamadoId: novoChamado.id, statusNovo: 'aberto' });
   registrarLog('chamado_criado', { cliente_id: clienteId, tipo: payload.tipo_chamado });
   erpChamFecharNovo();
   erpChamCarregar();
@@ -508,7 +512,7 @@ function erpChamImprimirOS(c, clienteNome, equipamento, tecNome) {
     row('Abertura', fmt(c.created_at || c.data_abertura)) +
     row('Deslocamento', fmt(c.data_deslocamento)) +
     row('Atendimento', fmt(c.data_atendimento_inicio)) +
-    row('Encerramento', fmtD(c.data_fechamento));
+    row('Encerramento', fmt(c.data_encerramento));
 
   const solicitanteRows =
     row('Nome', c.solicitante_nome || '') +

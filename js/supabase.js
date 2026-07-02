@@ -18,6 +18,41 @@ function _arrOuVazio(res) {
   return (res && res.ok && Array.isArray(res.data)) ? res.data : [];
 }
 
+// Histórico auditável de mudança de status (chamado_status_historico) —
+// fire-and-forget: nunca bloqueia nem trava a ação principal se a gravação
+// do histórico falhar. Use exatamente um de chamadoId/solicitacaoId.
+function registrarHistoricoStatus(opts) {
+  var body = {
+    status_anterior: opts.statusAnterior || null,
+    status_novo: opts.statusNovo,
+    usuario: opts.usuario || _erpNome || null,
+    chamado_id: opts.chamadoId || null,
+    solicitacao_id: opts.solicitacaoId || null
+  };
+  sf('/rest/v1/chamado_status_historico', {
+    method: 'POST',
+    headers: { 'Prefer': 'return=minimal' },
+    body: JSON.stringify(body)
+  }).catch(function() {});
+}
+
+// Busca e formata o histórico de um chamado ou solicitação como uma lista
+// de linhas prontas pra exibir (mais antigo primeiro). Ex.: "Aberto em
+// 01/07 09:00", "Faturado em 01/07 14:30 por master@teffe.com.br".
+async function _erpBuscarHistoricoStatus(chamadoId, solicitacaoId) {
+  var statusLabels = { aberto: 'Aberto', andamento: 'Em andamento', encerrado: 'Encerrado', concluido: 'Concluído', resolvido: 'Resolvido',
+    despachado: 'Despachado', em_deslocamento: 'Em deslocamento', em_atendimento: 'Em atendimento', aguardando_peca: 'Aguardando peça', pendente: 'Pendente',
+    faturado: 'Faturado', enviado: 'Enviado', cancelado: 'Cancelado' };
+  var filtro = chamadoId ? 'chamado_id=eq.' + chamadoId : 'solicitacao_id=eq.' + solicitacaoId;
+  var r = await sf('/rest/v1/chamado_status_historico?' + filtro + '&order=criado_em.asc&select=*');
+  var linhas = _arrOuVazio(r);
+  return linhas.map(function(h) {
+    var label = statusLabels[h.status_novo] || h.status_novo;
+    var dt = h.criado_em ? new Date(h.criado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    return label + ' em ' + dt + (h.usuario ? ' por ' + h.usuario : '');
+  });
+}
+
 let _erpTok = null;
 let _erpRefresh = null;
 let _erpNome = '';

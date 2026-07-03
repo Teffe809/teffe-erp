@@ -2,6 +2,12 @@ const SURL = 'https://hlfjcpgrxiktgctozilk.supabase.co';
 const SKEY = 'sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
 const EDGE_EMAIL = SURL + '/functions/v1/enviar-email';
 
+// Client oficial só para Realtime (alerta de novo chamado) — todo o resto do
+// app continua no fetch cru via sf()/_sfRaw(), não migrar CRUD para cá.
+// persistSession:false porque a sessão já é gerenciada manualmente (_erpTok
+// + localStorage), evita o SDK criar sua própria sessão paralela.
+const _erpSb = supabase.createClient(SURL, SKEY, { auth: { persistSession: false } });
+
 function capitalizarNome(nome) {
   if (!nome) return '';
   return nome.toLowerCase().split(' ').map(function(p) { return p.charAt(0).toUpperCase() + p.slice(1); }).join(' ');
@@ -151,6 +157,7 @@ async function _tentarRefresh() {
 }
 
 function erpLogoutExpired() {
+  _erpPararAlertaNovoChamado();
   _erpTok = null; _erpRefresh = null; _erpNome = ''; _erpPerfil = null;
   localStorage.removeItem('erp_tok');
   localStorage.removeItem('erp_refresh');
@@ -241,6 +248,7 @@ async function erpLogin() {
 }
 
 function erpLogout() {
+  _erpPararAlertaNovoChamado();
   _erpTok = null; _erpRefresh = null; _erpNome = ''; _erpPerfil = null;
   localStorage.removeItem('erp_tok');
   localStorage.removeItem('erp_refresh');
@@ -264,68 +272,79 @@ function _mostrarApp() {
   _erpIniciarAlertaNovoChamado();
 }
 
-// ── ALERTA DE NOVO CHAMADO (Bloco E) ──
-// Via polling (não Realtime): este ERP nunca carregou a SDK do Supabase
-// (usa só fetch cru via sf()), então usar postgres_changes exigiria
-// adicionar essa dependência só para isto. Testei a subscrição via um
-// script à parte e ela abre (status SUBSCRIBED), mas isso não garante que
-// a tabela está de fato na publicação supabase_realtime — só um INSERT
-// real confirmaria, e evitei inserir dado de teste em produção. Polling é
-// garantido: mesmo mecanismo (fetch + anon key) já usado no resto do app.
-var _erpAlertaUltimaVerificacao = null;
+// ── ALERTA DE NOVO CHAMADO (Bloco E → Realtime) ──
+// Antes era polling (setInterval 45s). Trocado para Supabase Realtime
+// (postgres_changes) agora que chamados/solicitacoes_suprimento estão na
+// publicação supabase_realtime. Mesma lógica de dedupe/toast — só a fonte
+// do evento mudou.
 var _erpAlertaVistos = {};
+var _erpAlertaCanalChamados = null;
+var _erpAlertaCanalSuprimento = null;
+var _erpAlertaSuprimentoPendentes = {};
+var _erpAlertaTipoLabel = { assistencia: 'Assistência', instalacao: 'Instalação', suprimento: 'Suprimento', preventiva: 'Preventiva', outro: 'Chamado' };
 
+// Não chama _erpSb.realtime.setAuth(_erpTok): SELECT em chamados/
+// solicitacoes_suprimento já é liberado pra role anon (mesma anon key usada
+// em sf()), então o Realtime funciona só com a apikey do client. Testado e
+// confirmado: setAuth() com um token inválido/expirado trava o canal num
+// loop eterno de rejoin sem se recuperar sozinho — sem integração com o
+// refresh de JWT do sf()/_tentarRefresh(), isso quebraria o alerta em
+// silêncio numa sessão longa. Preferível não depender do token de sessão
+// aqui.
 function _erpIniciarAlertaNovoChamado() {
-  _erpAlertaUltimaVerificacao = new Date().toISOString();
-  _erpVerificarNovosChamados();
-  setInterval(_erpVerificarNovosChamados, 45000);
+  if (!_erpTok) return;
+
+  _erpAlertaCanalChamados = _erpSb.channel('erp-realtime-chamados')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chamados' }, function(payload) {
+      _erpTratarNovoChamado(payload.new);
+    })
+    .subscribe();
+
+  _erpAlertaCanalSuprimento = _erpSb.channel('erp-realtime-suprimento')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'solicitacoes_suprimento' }, function(payload) {
+      _erpTratarNovaSolicitacaoSuprimento(payload.new);
+    })
+    .subscribe();
 }
 
-async function _erpVerificarNovosChamados() {
-  if (!_erpTok) return;
-  var desde = _erpAlertaUltimaVerificacao;
-  _erpAlertaUltimaVerificacao = new Date().toISOString();
+function _erpPararAlertaNovoChamado() {
+  if (_erpAlertaCanalChamados) { _erpSb.removeChannel(_erpAlertaCanalChamados); _erpAlertaCanalChamados = null; }
+  if (_erpAlertaCanalSuprimento) { _erpSb.removeChannel(_erpAlertaCanalSuprimento); _erpAlertaCanalSuprimento = null; }
+  _erpAlertaVistos = {};
+  _erpAlertaSuprimentoPendentes = {};
+}
 
-  var [chamRes, supRes] = await Promise.all([
-    sf('/rest/v1/chamados?select=id,numero,tipo_chamado,cliente_id,created_at&created_at=gt.' + encodeURIComponent(desde) + '&order=created_at.asc'),
-    sf('/rest/v1/solicitacoes_suprimento?select=id,numero,cliente_id,created_at&created_at=gt.' + encodeURIComponent(desde) + '&order=created_at.asc')
-  ]);
+async function _erpNomeClientePorId(clienteId) {
+  if (!clienteId) return 'Cliente';
+  var cr = await sf('/rest/v1/clientes?id=eq.' + clienteId + '&select=razao_social,fantasia');
+  var c = _arrOuVazio(cr)[0];
+  return (c && (c.razao_social || c.fantasia)) || 'Cliente';
+}
 
-  var novosChamados = _arrOuVazio(chamRes).filter(function(c) { return !_erpAlertaVistos[c.id]; });
-  novosChamados.forEach(function(c) { _erpAlertaVistos[c.id] = true; });
+async function _erpTratarNovoChamado(c) {
+  if (!c || _erpAlertaVistos[c.id]) return;
+  _erpAlertaVistos[c.id] = true;
+  var nome = await _erpNomeClientePorId(c.cliente_id);
+  var tipo = _erpAlertaTipoLabel[c.tipo_chamado] || 'Chamado';
+  _erpMostrarToast('Novo chamado aberto: O.S. ' + (c.numero != null ? c.numero : c.id.slice(0,6)) + ' — ' + tipo + ' — ' + nome, 'chamados-admin');
+}
 
-  // Um pedido de suprimento pode gerar várias linhas com o mesmo numero
-  // (carrinho com vários itens) — agrupa antes de notificar, senão vira um
-  // toast por item.
-  var vistosNumero = {};
-  var novosSuprimento = _arrOuVazio(supRes).filter(function(s) {
-    if (_erpAlertaVistos[s.id]) return false;
-    _erpAlertaVistos[s.id] = true;
-    var chave = s.numero != null ? ('n' + s.numero) : ('r' + s.id);
-    if (vistosNumero[chave]) return false;
-    vistosNumero[chave] = true;
-    return true;
-  });
+// Um pedido de suprimento pode gerar vários INSERTs com o mesmo numero
+// (carrinho com vários itens) — agrupa por numero numa janela curta antes de
+// notificar, senão vira um toast por item.
+function _erpTratarNovaSolicitacaoSuprimento(s) {
+  if (!s || _erpAlertaVistos[s.id]) return;
+  _erpAlertaVistos[s.id] = true;
 
-  if (!novosChamados.length && !novosSuprimento.length) return;
+  var chave = s.numero != null ? ('n' + s.numero) : ('r' + s.id);
+  if (_erpAlertaSuprimentoPendentes[chave]) return;
+  _erpAlertaSuprimentoPendentes[chave] = true;
 
-  var clienteIds = [...new Set(novosChamados.concat(novosSuprimento).map(function(x) { return x.cliente_id; }).filter(Boolean))];
-  var clienteMap = {};
-  if (clienteIds.length) {
-    var cr = await sf('/rest/v1/clientes?id=in.(' + clienteIds.join(',') + ')&select=id,razao_social,fantasia');
-    _arrOuVazio(cr).forEach(function(c) { clienteMap[c.id] = c.razao_social || c.fantasia || 'Cliente'; });
-  }
-
-  var tipoLabel = { assistencia: 'Assistência', instalacao: 'Instalação', suprimento: 'Suprimento', preventiva: 'Preventiva', outro: 'Chamado' };
-  novosChamados.forEach(function(c) {
-    var nome = clienteMap[c.cliente_id] || 'Cliente';
-    var tipo = tipoLabel[c.tipo_chamado] || 'Chamado';
-    _erpMostrarToast('Novo chamado aberto: O.S. ' + (c.numero != null ? c.numero : c.id.slice(0,6)) + ' — ' + tipo + ' — ' + nome, 'chamados-admin');
-  });
-  novosSuprimento.forEach(function(s) {
-    var nome = clienteMap[s.cliente_id] || 'Cliente';
+  setTimeout(async function() {
+    delete _erpAlertaSuprimentoPendentes[chave];
+    var nome = await _erpNomeClientePorId(s.cliente_id);
     _erpMostrarToast('Nova solicitação de suprimento: O.S. ' + (s.numero != null ? s.numero : s.id.slice(0,6)) + ' — ' + nome, 'solicitacoes-suprimento');
-  });
+  }, 1500);
 }
 
 function _erpMostrarToast(texto, view) {

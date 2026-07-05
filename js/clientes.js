@@ -172,13 +172,50 @@ async function excluirCliente(id) {
 
 /* ─── USUÁRIOS DO CLIENTE ─── */
 
+var _CLI_PERM_MODULOS = ['chamados', 'financeiro', 'equipamentos'];
+var _CLI_PERM_LABELS = { chamados: 'Chamados', financeiro: 'Financeiro', equipamentos: 'Equipamentos' };
+
 async function abrirModalUsuariosCliente(clienteId, razaoSocial) {
   _clienteAtualId = clienteId;
   document.getElementById('muc-titulo').textContent = 'Usuários — ' + razaoSocial;
-  document.getElementById('muc-nome').value = '';
-  document.getElementById('muc-email').value = '';
+  mucLimparFormulario();
   document.getElementById('modal-usuarios-cliente').classList.add('open');
   await carregarUsuariosCliente(clienteId);
+}
+
+function mucLimparFormulario() {
+  document.getElementById('muc-id').value = '';
+  document.getElementById('muc-form-titulo').textContent = 'Adicionar novo usuário';
+  document.getElementById('muc-nome').value = '';
+  document.getElementById('muc-email').value = '';
+  document.getElementById('muc-email').disabled = false;
+  document.getElementById('muc-acesso-total').checked = true;
+  _CLI_PERM_MODULOS.forEach(function (m) { var el = document.getElementById('muc-perm-' + m); if (el) el.checked = false; });
+  mucToggleAcessoTotal();
+  document.getElementById('muc-erro').style.display = 'none';
+  document.getElementById('muc-btn-salvar').innerHTML = '<i class="ti ti-send"></i> Enviar Convite';
+  document.getElementById('muc-btn-cancelar-edicao').style.display = 'none';
+}
+
+function mucCancelarEdicao() {
+  mucLimparFormulario();
+}
+
+function mucToggleAcessoTotal() {
+  var checked = document.getElementById('muc-acesso-total').checked;
+  document.getElementById('muc-permissoes-wrap').style.display = checked ? 'none' : 'block';
+}
+
+function _lerPermissoesFormularioCliente() {
+  var acessoTotal = document.getElementById('muc-acesso-total').checked;
+  var permissoes = {};
+  if (!acessoTotal) {
+    _CLI_PERM_MODULOS.forEach(function (m) {
+      var el = document.getElementById('muc-perm-' + m);
+      if (el && el.checked) permissoes[m] = true;
+    });
+  }
+  return { acessoTotal: acessoTotal, permissoes: permissoes };
 }
 
 async function carregarUsuariosCliente(clienteId) {
@@ -193,19 +230,50 @@ async function carregarUsuariosCliente(clienteId) {
     const badge = u.ativo
       ? '<span class="badge badge-ativo">Ativo</span>'
       : '<span class="badge badge-encerrado">Inativo</span>';
+    const permChips = u.acesso_total
+      ? '<span class="badge badge-master">Acesso Total</span>'
+      : (_CLI_PERM_MODULOS.filter(function (m) { return u.permissoes && u.permissoes[m]; })
+          .map(function (m) { return '<span class="badge" style="background:#EBF4FF;color:#0A4B8D;margin:2px 3px 2px 0">' + _CLI_PERM_LABELS[m] + '</span>'; })
+          .join('') || '<span style="color:#9CA3AF;font-size:12px">Nenhuma permissão</span>');
     return '<div class="usuario-item">' +
-      '<div><strong>' + _esc(u.nome) + '</strong><br><small style="color:#6B7280">' + _esc(u.email) + '</small></div>' +
+      '<div><strong>' + _esc(u.nome) + '</strong><br><small style="color:#6B7280">' + _esc(u.email) + '</small><br>' + permChips + '</div>' +
       '<div style="display:flex;gap:6px;align-items:center">' + badge +
+        '<button class="btn-icon" title="Editar permissões" onclick=\'mucAbrirEdicao(' + JSON.stringify(u) + ')\'><i class="ti ti-pencil"></i></button>' +
         '<button class="btn-secondary" style="padding:4px 10px;font-size:12px" onclick="resetarSenhaUsuario(\'' + _esc(u.email) + '\')"><i class="ti ti-key"></i> Reset senha</button>' +
       '</div>' +
     '</div>';
   }).join('');
 }
 
+function mucAbrirEdicao(u) {
+  document.getElementById('muc-id').value = u.id;
+  document.getElementById('muc-form-titulo').textContent = 'Editar usuário';
+  document.getElementById('muc-nome').value = u.nome || '';
+  document.getElementById('muc-email').value = u.email || '';
+  document.getElementById('muc-email').disabled = true; // e-mail já vinculado à conta de login — não editável aqui
+  document.getElementById('muc-acesso-total').checked = !!u.acesso_total;
+  _CLI_PERM_MODULOS.forEach(function (m) {
+    var el = document.getElementById('muc-perm-' + m);
+    if (el) el.checked = !!(u.permissoes && u.permissoes[m]);
+  });
+  mucToggleAcessoTotal();
+  document.getElementById('muc-erro').style.display = 'none';
+  document.getElementById('muc-btn-salvar').innerHTML = '<i class="ti ti-device-floppy"></i> Salvar Alterações';
+  document.getElementById('muc-btn-cancelar-edicao').style.display = '';
+}
+
+function salvarUsuarioCliente() {
+  var id = document.getElementById('muc-id').value;
+  return id ? _atualizarUsuarioCliente(id) : adicionarUsuarioCliente();
+}
+
 async function adicionarUsuarioCliente() {
   const nome = document.getElementById('muc-nome').value.trim();
   const email = document.getElementById('muc-email').value.trim();
-  if (!nome || !email) { alert('Informe nome e e-mail.'); return; }
+  const erroEl = document.getElementById('muc-erro');
+  erroEl.style.display = 'none';
+  if (!nome || !email) { erroEl.style.display = 'block'; erroEl.textContent = 'Informe nome e e-mail.'; return; }
+  var perm = _lerPermissoesFormularioCliente();
 
   // 1. Criar conta no Auth com senha temporária aleatória (anon key suficiente para signup)
   const senhaTemp = crypto.randomUUID();
@@ -224,13 +292,13 @@ async function adicionarUsuarioCliente() {
   );
   if (!signupRes.ok && !jaExistia) {
     const msg = signupData.error_description || signupData.msg || signupData.message || JSON.stringify(signupData);
-    alert('Erro ao criar conta do usuário: ' + msg);
+    erroEl.style.display = 'block'; erroEl.textContent = 'Erro ao criar conta do usuário: ' + msg;
     return;
   }
 
   // 2. Salvar em cliente_usuarios (insert ignora conflito de e-mail duplicado)
   const userId = signupData.user ? signupData.user.id : (signupData.id || null);
-  const insertPayload = { cliente_id: _clienteAtualId, nome, email, ativo: true };
+  const insertPayload = { cliente_id: _clienteAtualId, nome, email, ativo: true, acesso_total: perm.acessoTotal, permissoes: perm.permissoes };
   if (userId) insertPayload.user_id = userId;
 
   const dbRes = await sf('/rest/v1/cliente_usuarios', {
@@ -242,7 +310,7 @@ async function adicionarUsuarioCliente() {
     const dbMsg = dbRes.data && dbRes.data.message ? dbRes.data.message : JSON.stringify(dbRes.data);
     // Código 23505 = unique_violation (usuário já cadastrado para este cliente)
     if (!(dbMsg || '').includes('23505') && !(dbMsg || '').toLowerCase().includes('unique')) {
-      alert('Erro ao cadastrar usuário: ' + dbMsg);
+      erroEl.style.display = 'block'; erroEl.textContent = 'Erro ao cadastrar usuário: ' + dbMsg;
       return;
     }
   }
@@ -250,11 +318,33 @@ async function adicionarUsuarioCliente() {
   // 3. Disparar e-mail de redefinição de senha (anon key aceita — o cliente cria a própria senha)
   await _enviarRecoverUsuario(email);
 
-  document.getElementById('muc-nome').value = '';
-  document.getElementById('muc-email').value = '';
-  registrarLog('usuario_cliente_criado', { email, cliente_id: _clienteAtualId });
+  registrarLog('usuario_cliente_criado', { email, cliente_id: _clienteAtualId, acesso_total: perm.acessoTotal });
+  mucLimparFormulario();
   await carregarUsuariosCliente(_clienteAtualId);
   alert('Usuário cadastrado! Um e-mail de definição de senha foi enviado para ' + email + '.');
+}
+
+async function _atualizarUsuarioCliente(id) {
+  const nome = document.getElementById('muc-nome').value.trim();
+  const erroEl = document.getElementById('muc-erro');
+  erroEl.style.display = 'none';
+  if (!nome) { erroEl.style.display = 'block'; erroEl.textContent = 'Informe o nome.'; return; }
+  var perm = _lerPermissoesFormularioCliente();
+
+  const dbRes = await sf('/rest/v1/cliente_usuarios?id=eq.' + id, {
+    method: 'PATCH',
+    headers: { 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ nome: nome, acesso_total: perm.acessoTotal, permissoes: perm.permissoes })
+  });
+  if (!dbRes.ok) {
+    const dbMsg = dbRes.data && dbRes.data.message ? dbRes.data.message : JSON.stringify(dbRes.data);
+    erroEl.style.display = 'block'; erroEl.textContent = 'Erro ao salvar alterações: ' + dbMsg;
+    return;
+  }
+
+  registrarLog('usuario_cliente_editado', { id: id, cliente_id: _clienteAtualId, acesso_total: perm.acessoTotal });
+  mucLimparFormulario();
+  await carregarUsuariosCliente(_clienteAtualId);
 }
 
 async function _enviarRecoverUsuario(email) {

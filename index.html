@@ -1229,12 +1229,29 @@
     <div class="modal-body">
       <div id="muc-lista" style="margin-bottom:20px;min-height:60px"><div class="tbl-loading">Carregando...</div></div>
       <div style="border-top:1px solid #E5E7EB;padding-top:16px">
-        <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px">Adicionar novo usuário</p>
+        <p id="muc-form-titulo" style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px">Adicionar novo usuário</p>
+        <input type="hidden" id="muc-id"/>
         <div class="modal-grid-2">
           <div class="fg"><label>Nome *</label><input id="muc-nome" type="text" placeholder="Nome completo"/></div>
           <div class="fg"><label>E-mail *</label><input id="muc-email" type="email" placeholder="usuario@empresa.com"/></div>
         </div>
-        <button class="btn-primary" onclick="adicionarUsuarioCliente()"><i class="ti ti-send"></i> Enviar Convite</button>
+        <div class="fg-check" style="margin-top:6px">
+          <input type="checkbox" id="muc-acesso-total" checked onchange="mucToggleAcessoTotal()"/>
+          <label for="muc-acesso-total"><strong>Acesso Total</strong> — acessa todos os módulos da área do cliente</label>
+        </div>
+        <div id="muc-permissoes-wrap" style="display:none">
+          <label style="display:block;margin-bottom:6px">Permissões por módulo</label>
+          <div class="perm-grid">
+            <label class="perm-check"><input type="checkbox" id="muc-perm-chamados"/> <span>Chamados<small>Abrir/ver assistência e suprimentos, Histórico</small></span></label>
+            <label class="perm-check"><input type="checkbox" id="muc-perm-financeiro"/> <span>Financeiro<small>Contratos, boletos, extratos</small></span></label>
+            <label class="perm-check"><input type="checkbox" id="muc-perm-equipamentos"/> <span>Equipamentos</span></label>
+          </div>
+        </div>
+        <div id="muc-erro" style="display:none;color:#DC2626;font-size:13px;margin-top:10px"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-primary" id="muc-btn-salvar" onclick="salvarUsuarioCliente()"><i class="ti ti-send"></i> Enviar Convite</button>
+          <button class="btn-secondary" id="muc-btn-cancelar-edicao" style="display:none" onclick="mucCancelarEdicao()">Cancelar edição</button>
+        </div>
       </div>
     </div>
     <div class="modal-footer">

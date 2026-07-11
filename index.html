@@ -42,6 +42,10 @@
       <span class="erp-tag">ERP</span>
     </div>
     <div class="header-right">
+      <button class="btn-sino" id="btn-sino-eventos" onclick="erpEventosAbrir()" title="Notificações">
+        <i class="ti ti-bell"></i>
+        <span class="sino-badge" id="sino-badge" style="display:none"></span>
+      </button>
       <span id="erp-user-nome"></span>
       <button class="btn-sair" onclick="erpLogout()"><i class="ti ti-logout"></i> Sair</button>
     </div>
@@ -1488,6 +1492,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
+<script src="js/eventos.js"></script>
 <script src="js/estoque.js"></script>
 <script src="js/insumos.js"></script>
 <script src="js/contratos.js"></script>
@@ -1528,5 +1533,15 @@ async function confirmarPagamentoUnificado() {
 }
 </script>
 <div id="erp-toast-container" style="position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:340px;"></div>
+
+<!-- ══════════════════════ PAINEL DE NOTIFICAÇÕES (sino) ══════════════════════ -->
+<div id="erp-eventos-overlay" class="eventos-overlay" onclick="erpEventosFechar()"></div>
+<aside id="erp-eventos-painel" class="eventos-painel">
+  <div class="eventos-painel-header">
+    <h3>Notificações</h3>
+    <button class="modal-close" onclick="erpEventosFechar()">✕</button>
+  </div>
+  <div id="eventos-lista" class="eventos-lista"></div>
+</aside>
 </body>
 </html>

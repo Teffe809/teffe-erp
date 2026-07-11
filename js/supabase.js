@@ -158,6 +158,7 @@ async function _tentarRefresh() {
 
 function erpLogoutExpired() {
   _erpPararAlertaNovoChamado();
+  _erpEventosPararRealtime();
   _erpTok = null; _erpRefresh = null; _erpNome = ''; _erpPerfil = null;
   localStorage.removeItem('erp_tok');
   localStorage.removeItem('erp_refresh');
@@ -249,6 +250,7 @@ async function erpLogin() {
 
 function erpLogout() {
   _erpPararAlertaNovoChamado();
+  _erpEventosPararRealtime();
   _erpTok = null; _erpRefresh = null; _erpNome = ''; _erpPerfil = null;
   localStorage.removeItem('erp_tok');
   localStorage.removeItem('erp_refresh');
@@ -270,6 +272,8 @@ function _mostrarApp(viewInicial) {
   erpShowView(viewInicial || 'dashboard');
   verificarAlertasAutomatico();
   _erpIniciarAlertaNovoChamado();
+  _erpEventosCarregar();
+  _erpEventosIniciarRealtime();
 }
 
 // ── ALERTA DE NOVO CHAMADO (Bloco E → Realtime) ──

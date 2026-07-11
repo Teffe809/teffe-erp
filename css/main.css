@@ -306,3 +306,24 @@ input[type="password"] { text-transform: none !important; }
 
 /* Toast de alerta de novo chamado (Bloco E) */
 @keyframes erpToastIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── SINO DE NOTIFICAÇÕES (feed de eventos) ── */
+.btn-sino{position:relative;background:rgba(255,255,255,.13);border:none;color:#fff;width:36px;height:36px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:17px;transition:background .2s;}
+.btn-sino:hover{background:rgba(255,255,255,.24);}
+.sino-badge{position:absolute;top:-4px;right:-4px;display:inline-flex;align-items:center;justify-content:center;background:#DC2626;color:#fff;font-size:10px;font-weight:700;border-radius:20px;min-width:17px;height:17px;padding:0 4px;line-height:1;border:2px solid var(--azul);}
+
+.eventos-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1099;}
+.eventos-overlay.open{display:block;}
+.eventos-painel{position:fixed;top:0;right:0;bottom:0;width:380px;max-width:92vw;background:#fff;z-index:1100;box-shadow:-8px 0 30px rgba(0,0,0,.18);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;}
+.eventos-painel.open{transform:translateX(0);}
+.eventos-painel-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.eventos-painel-header h3{font-size:16px;font-weight:700;color:var(--azul);}
+.eventos-lista{flex:1;overflow-y:auto;padding:6px 0;}
+.evento-item{display:flex;gap:12px;padding:12px 20px;cursor:pointer;border-bottom:1px solid #F3F4F6;transition:background .15s;}
+.evento-item:hover{background:#F9FAFB;}
+.evento-item.evento-nao-visto{background:#EBF4FF;}
+.evento-item.evento-nao-visto:hover{background:#DCE9FB;}
+.evento-icone{flex-shrink:0;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.evento-corpo{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.evento-desc{font-size:13px;color:#111827;line-height:1.4;}
+.evento-hora{font-size:11px;color:#9CA3AF;}

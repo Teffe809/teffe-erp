@@ -262,12 +262,12 @@ function erpLogout() {
   document.getElementById('l-btn').disabled = false;
 }
 
-function _mostrarApp() {
+function _mostrarApp(viewInicial) {
   document.getElementById('erp-login').style.display = 'none';
   document.getElementById('erp-app').style.display = 'flex';
   document.getElementById('erp-user-nome').textContent = _erpNome;
   _erpAplicarPermissoes();
-  erpShowView('dashboard');
+  erpShowView(viewInicial || 'dashboard');
   verificarAlertasAutomatico();
   _erpIniciarAlertaNovoChamado();
 }
@@ -362,6 +362,10 @@ function _erpMostrarToast(texto, view) {
 }
 
 function erpShowView(view) {
+  // Hash inválido/adulterado (ex.: URL antiga de uma view removida) — cai pro
+  // dashboard em vez de deixar o getElementById('view-' + view) explodir.
+  if (!document.getElementById('view-' + view)) view = 'dashboard';
+
   if (view === 'usuarios-erp' && !(_erpPerfil && _erpPerfil.acesso_total)) {
     _erpMsgAcesso = 'Acesso não autorizado.';
     erpShowView('dashboard');
@@ -380,6 +384,11 @@ function erpShowView(view) {
   document.getElementById('view-' + view).classList.add('active');
   var navEl = document.getElementById('nav-' + view);
   if (navEl) navEl.classList.add('active');
+  // Reflete a view atual na URL (hash) via replaceState — não usa
+  // location.hash direto pra não empilhar uma entrada de histórico por
+  // navegação nem disparar 'hashchange' (não há listener registrado hoje).
+  // É isso que permite restaurar a view certa num F5 (ver DOMContentLoaded).
+  history.replaceState(null, '', '#' + view);
   if (view === 'dashboard') carregarDashboard();
   else if (view === 'pecas') carregarPecas();
   else if (view === 'insumos') carregarInsumos();
@@ -446,7 +455,11 @@ document.addEventListener('DOMContentLoaded', function () {
     _erpRefresh = refresh || null;
     _erpNome = nome || '';
     if (perfilRaw) { try { _erpPerfil = JSON.parse(perfilRaw); } catch (e) { _erpPerfil = null; } }
-    _mostrarApp();
+    // F5/reload: restaura a view que estava na URL em vez de sempre cair no
+    // Dashboard. Sem hash (acesso direto/primeiro login) mantém o padrão
+    // antigo. erpShowView() já cuida do gate de permissão e de hash inválido.
+    var viewDoHash = (location.hash || '').replace(/^#/, '');
+    _mostrarApp(viewDoHash);
   }
 
   document.getElementById('l-senha').addEventListener('keydown', function (e) {

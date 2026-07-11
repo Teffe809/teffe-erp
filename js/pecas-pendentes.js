@@ -148,12 +148,20 @@ async function erpPecaMarcarEnviada(id) {
   carregarPecasPendentes();
 }
 
-// Marcar como Entregue: além de fechar a peça, retoma o SLA do chamado de
-// origem (sai de aguardando_peca) — mesma matemática de pausa/retomada que
-// tecReceberPecas() usa no portal do técnico (teffe-site), só que disparada
-// do lado do ERP. Só mexe no chamado se ele ainda estiver em aguardando_peca
-// — se o técnico já tiver retomado por conta própria (self-service, botão
-// "Já recebi" já existente no portal), não sobrescreve de novo.
+// Marcar como Entregue: além de fechar a peça, retoma a CONTAGEM do SLA do
+// chamado de origem (continua de onde parou, não reinicia) — mesma
+// matemática de pausa/retomada de tecReceberPecas() no portal do técnico,
+// só que disparada do lado do ERP. NÃO usa mais 'despachado' como destino
+// (isso reiniciava o SLA do zero, comportamento legado errado) — usa
+// 'peca_entregue', um estado intermediário próprio: o único lugar em que o
+// chamado deve poder ir daqui é Encerrar ou Solicitar Peça de novo (isso é
+// responsabilidade do botoeira do portal do técnico — tecRenderAcoes() em
+// teffe-site — repo que não é tocado por este código; ver relatório).
+// 'peca_entregue' no singular pra bater com o padrão de 'aguardando_peca' e
+// com o tipo_evento 'peca_entregue' já usado no feed do sino (Tarefa 1).
+// Só mexe no chamado se ele ainda estiver em aguardando_peca — se o técnico
+// já tiver retomado por conta própria (self-service, botão "Já recebi" já
+// existente no portal), não sobrescreve de novo.
 async function erpPecaMarcarEntregue(id) {
   var p = _erpPPCache.find(function(x) { return x.id === id; });
   if (!p) return;
@@ -168,10 +176,10 @@ async function erpPecaMarcarEntregue(id) {
     if (c.sla_pausa_inicio) totalPausado += Math.floor((Date.now() - new Date(c.sla_pausa_inicio).getTime()) / 60000);
     var upd = await sf('/rest/v1/chamados?id=eq.' + c.id, {
       method: 'PATCH', headers: { 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ status_tecnico: 'despachado', pecas_status: null, sla_pausado: false, sla_pausa_inicio: null, sla_tempo_pausado: totalPausado })
+      body: JSON.stringify({ status_tecnico: 'peca_entregue', pecas_status: null, sla_pausado: false, sla_pausa_inicio: null, sla_tempo_pausado: totalPausado })
     });
     if (upd.ok) {
-      registrarHistoricoStatus({ chamadoId: c.id, statusAnterior: 'aguardando_peca', statusNovo: 'despachado', usuario: 'sistema' });
+      registrarHistoricoStatus({ chamadoId: c.id, statusAnterior: 'aguardando_peca', statusNovo: 'peca_entregue', usuario: 'sistema' });
     }
   }
 

@@ -87,7 +87,7 @@ var _ERP_VIEW_MODULO = {
   // Admin — antes ficava junto com Técnicos/Logs, sem como conceder acesso
   // a um sem conceder o outro. Solicitações de Suprimento entrou junto por
   // ser operacionalmente a mesma coisa (chamado de suprimento).
-  'chamados-admin': 'chamados', 'solicitacoes-suprimento': 'chamados'
+  'chamados-admin': 'chamados', 'solicitacoes-suprimento': 'chamados', 'pecas-pendentes': 'chamados'
   // 'usuarios-erp' não entra aqui de propósito: é restrita a acesso_total (master),
   // não à permissão genérica 'admin' — ver checagem dedicada em erpShowView().
 };
@@ -274,6 +274,7 @@ function _mostrarApp(viewInicial) {
   _erpIniciarAlertaNovoChamado();
   _erpEventosCarregar();
   _erpEventosIniciarRealtime();
+  carregarPecasPendentes(); // popula o badge da nav mesmo sem visitar a view (mesmo padrão do badge de Alertas)
 }
 
 // ── ALERTA DE NOVO CHAMADO (Bloco E → Realtime) ──
@@ -415,6 +416,7 @@ function erpShowView(view) {
   else if (view === 'usuarios-erp') erpUsuariosCarregar();
   else if (view === 'fechamentos') carregarFechamentosView();
   else if (view === 'solicitacoes-suprimento') carregarSolicitacoesSuprimento();
+  else if (view === 'pecas-pendentes') carregarPecasPendentes();
 }
 
 function fecharModal(id) {

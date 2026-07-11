@@ -70,17 +70,15 @@ async function erpChamCarregar() {
     const cliNome = cli ? (cli.razao_social || cli.fantasia || '–') : '–';
     const cliCodigo = cli && cli.codigo ? '<small style="color:#9CA3AF;font-family:monospace"> [' + cli.codigo + ']</small>' : '';
 
+    // Pedido em texto livre que o técnico fez (chamados.pecas_status/
+    // pecas_solicitadas) — sinal cru de que "algo foi pedido". A partir daqui
+    // o fluxo estruturado (peça de catálogo + Faturar/Comprar/NF/Enviada/
+    // Entregue) vive em chamado_pecas_pendentes, vinculado pelo botão
+    // "Vincular Peça" no detalhe do chamado — ver tela "Peças Pendentes".
     const ps = r.pecas_status;
     const pecasBadge = ps
       ? '<span style="font-size:11px;padding:2px 6px;border-radius:3px;background:#FEF3C7;color:#92400E">' + (psLabel[ps] || ps) + '</span>'
       : '–';
-    const pecasBtn = ps === 'solicitado'
-      ? '<br><button class="btn-secondary" style="margin-top:3px;font-size:11px;padding:2px 8px" onclick="event.stopPropagation();erpChamFaturarPecas(\'' + r.id + '\')">Faturar</button>'
-      : ps === 'faturado'
-      ? '<br><button class="btn-secondary" style="margin-top:3px;font-size:11px;padding:2px 8px" onclick="event.stopPropagation();erpChamDespacharPecas(\'' + r.id + '\')">Despachar</button>'
-      : ps === 'despachado'
-      ? '<br><button class="btn-secondary" style="margin-top:3px;font-size:11px;padding:2px 8px" onclick="event.stopPropagation();erpChamConfirmarEntrega(\'' + r.id + '\',\'' + (r.tecnico_id || '') + '\',\'' + (r.numero || r.id.slice(0,6)) + '\')">Confirmar Entrega</button>'
-      : '';
 
     const tipo = r.tipo_chamado || 'outro';
     const tipoBadge = '<span style="font-size:11px;padding:2px 7px;border-radius:3px;background:' + (tipoColor[tipo]||'#9CA3AF') + '22;color:' + (tipoColor[tipo]||'#9CA3AF') + ';font-weight:600">' + (tipoLabel[tipo] || tipo) + '</span>';
@@ -98,7 +96,7 @@ async function erpChamCarregar() {
       '<td class="adm-td-trunc" title="' + _esc((r.descricao||'').replace(/"/g,'&quot;')) + '">' + _esc(r.descricao || r.titulo || '–') + '</td>' +
       '<td>' + _esc(r.solicitante_nome || '–') + '</td>' +
       '<td><span class="badge badge-' + r.status + '">' + r.status + '</span></td>' +
-      '<td onclick="event.stopPropagation()">' + pecasBadge + pecasBtn + '</td>' +
+      '<td onclick="event.stopPropagation()">' + pecasBadge + '</td>' +
       '<td onclick="event.stopPropagation()">' + tecSel + '</td>' +
       '<td>' + new Date(r.created_at).toLocaleDateString('pt-BR') + '</td>' +
       '</tr>';
@@ -116,33 +114,6 @@ async function erpChamRedistribuir(chamadoId, tecnicoId) {
     body: JSON.stringify({ tecnico_id: tecnicoId || null })
   });
   if (!ok) alert('Erro ao redistribuir chamado.');
-}
-
-// ── FLUXO PEÇAS ──
-async function erpChamFaturarPecas(id) {
-  const { ok } = await sf('/rest/v1/chamados?id=eq.' + id, { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ pecas_status: 'faturado' }) });
-  if (!ok) { alert('Erro ao atualizar status de peças.'); return; }
-  erpChamCarregar();
-}
-
-async function erpChamDespacharPecas(id) {
-  const { ok } = await sf('/rest/v1/chamados?id=eq.' + id, { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ pecas_status: 'despachado' }) });
-  if (!ok) { alert('Erro ao atualizar status de peças.'); return; }
-  erpChamCarregar();
-}
-
-async function erpChamConfirmarEntrega(id, tecnicoId, numChamado) {
-  const { ok } = await sf('/rest/v1/chamados?id=eq.' + id, { method: 'PATCH', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify({ pecas_status: 'entregue' }) });
-  if (!ok) { alert('Erro ao confirmar entrega.'); return; }
-  // Notificar técnico por e-mail
-  if (tecnicoId) {
-    const tec = _erpTecs.find(function(t) { return t.id === tecnicoId; });
-    if (tec && tec.email && _erpTok) {
-      const html = '<p>Olá <strong>' + (tec.nome ? capitalizarNome(tec.nome) : 'Técnico') + '</strong>,</p><p>As peças para o chamado <strong>O.S. ' + numChamado + '</strong> foram entregues. Por favor, acesse o portal e inicie o atendimento.</p><p>Atenciosamente,<br><strong>Teffe Tecnologia</strong></p>';
-      erpEnviarEmail(tec.email, 'Peças Disponíveis — Chamado O.S. ' + numChamado + ' — Teffe Tecnologia', html).catch(function() {});
-    }
-  }
-  erpChamCarregar();
 }
 
 // ── DETALHE CHAMADO ──
@@ -167,9 +138,13 @@ async function erpChamAbrirDetalhe(id) {
   const encerrado = ['encerrado','concluido','resolvido'].includes(c.status);
 
   // Carregar dados paralelos
-  var equipamento = null, clienteNome = '–', pecas = [], fotosTecnico = [], historico = [];
+  var equipamento = null, clienteNome = '–', pecas = [], fotosTecnico = [], historico = [], pecasPendentes = [];
 
   await Promise.all([
+    // Peças pendentes (Tarefa 2 — fluxo Faturar/Comprar/NF/Enviada/Entregue)
+    sf('/rest/v1/chamado_pecas_pendentes?chamado_id=eq.' + c.id + '&select=*,pecas(codigo,descricao,estoque_atual)&order=criado_em.asc').then(function(r) {
+      pecasPendentes = _arrOuVazio(r);
+    }),
     // Histórico de mudanças de status
     _erpBuscarHistoricoStatus(c.id, null).then(function(h) { historico = h; }),
     // Equipamento
@@ -203,6 +178,7 @@ async function erpChamAbrirDetalhe(id) {
   ]).catch(function() {});
 
   c._pecas = pecas;
+  c._pecasPendentes = pecasPendentes;
 
   // Técnico responsável
   var tecNome = '–';
@@ -235,6 +211,27 @@ async function erpChamAbrirDetalhe(id) {
           '<td>' + (p.quantidade || 0) + ' ' + ((p._peca && p._peca.unidade) || 'un') + '</td></tr>';
       }).join('') + '</tbody></table></div>'
     : '';
+
+  // Peças pendentes (Tarefa 2) — fluxo estruturado Faturar/Comprar/NF/
+  // Enviada/Entregue, criado a partir do pedido em texto livre que o
+  // técnico registrou (c.pecas_solicitadas, mostrado como contexto aqui).
+  // As ações (Faturar/Comprar/etc) ficam na tela dedicada "Peças
+  // Pendentes" — aqui é só leitura + o botão de vincular uma peça nova.
+  var pecasPendentesHtml =
+    '<div class="adm-det-section" style="margin-top:16px">' +
+      '<div class="adm-det-label" style="margin-bottom:8px">Peças Pendentes (fluxo Faturar/Comprar)</div>' +
+      (c.pecas_solicitadas ? '<div style="font-size:12px;color:#6B7280;margin-bottom:8px">Pedido do técnico (texto livre): "' + _esc(c.pecas_solicitadas) + '"</div>' : '') +
+      (pecasPendentes.length
+        ? '<table class="erp-table"><thead><tr><th>Peça</th><th>Qtd</th><th>Status</th></tr></thead><tbody>' +
+          pecasPendentes.map(function(p) {
+            var cor = _PP_STATUS_COR[p.status] || '#9CA3AF';
+            var pecaNome = p.pecas ? ((p.pecas.codigo ? '[' + p.pecas.codigo + '] ' : '') + p.pecas.descricao) : '–';
+            return '<tr><td>' + _esc(pecaNome) + '</td><td>' + (p.quantidade || 1) + '</td>' +
+              '<td><span style="font-size:11px;padding:2px 7px;border-radius:3px;background:' + cor + '22;color:' + cor + ';font-weight:600">' + (_PP_STATUS_LABEL[p.status] || p.status) + '</span></td></tr>';
+          }).join('') + '</tbody></table>'
+        : '<div style="font-size:13px;color:#9CA3AF;margin-bottom:8px">Nenhuma peça vinculada ainda.</div>') +
+      '<button class="btn-secondary" style="margin-top:8px;font-size:12px;padding:5px 12px" onclick="erpAbrirVincularPeca(\'' + c.id + '\')"><i class="ti ti-plus"></i> Vincular Peça</button>' +
+    '</div>';
 
   // Anexos: foto que o cliente envia ao abrir o chamado (chamados.imagem_url,
   // gravada mas nunca exibida antes) + fotos do técnico (tabela chamado_fotos).
@@ -292,6 +289,7 @@ async function erpChamAbrirDetalhe(id) {
         '<div style="margin-top:6px;font-size:13px;font-weight:600;color:#374151;border-top:1px solid #D1D5DB;display:inline-block;padding-top:4px">' + _esc(c.nome_assinatura || '') + '</div>' +
       '</div>' : '') +
     pecasHtml +
+    pecasPendentesHtml +
     fotosHtml +
     '<div class="adm-det-section" style="margin-top:16px;background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:9px;padding:12px 14px">' +
       '<div class="adm-det-label" style="color:#92400E;margin-bottom:8px">⚠️ Observações Internas (uso interno)</div>' +

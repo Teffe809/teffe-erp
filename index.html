@@ -142,6 +142,10 @@
         <button class="nav-item" id="nav-solicitacoes-suprimento" onclick="erpShowView('solicitacoes-suprimento')">
           <i class="ti ti-package"></i> <span class="nav-label">Solicitações de Suprimento</span>
         </button>
+        <button class="nav-item" id="nav-pecas-pendentes" onclick="erpShowView('pecas-pendentes')">
+          <i class="ti ti-clipboard-list"></i> <span class="nav-label">Peças Pendentes</span>
+          <span class="nav-badge" id="nav-pecas-pendentes-badge"></span>
+        </button>
       </div>
 
       <div class="sidebar-group" data-modulo="admin">
@@ -524,6 +528,19 @@
         <div id="sup-table-wrap" class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
       </div>
 
+      <!-- PEÇAS PENDENTES -->
+      <div class="erp-view" id="view-pecas-pendentes">
+        <div class="view-header">
+          <h1><i class="ti ti-clipboard-list"></i> Peças Pendentes</h1>
+        </div>
+        <div id="pp-table-wrap" class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+
+        <div class="view-header" style="margin-top:28px">
+          <h1 style="font-size:15px"><i class="ti ti-shopping-cart"></i> Pedidos de Compra Pendentes</h1>
+        </div>
+        <div id="pp-pedidos-wrap" class="table-wrap"><div class="tbl-loading">Carregando...</div></div>
+      </div>
+
       <!-- USUÁRIOS ERP -->
       <div class="erp-view" id="view-usuarios-erp">
         <div class="view-header">
@@ -574,6 +591,47 @@
     <div class="modal-footer">
       <button class="btn-secondary" onclick="fecharModal('modal-peca')">Cancelar</button>
       <button class="btn-primary" onclick="salvarPeca()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL COMPRAR PEÇA (pedidos_compra) ══════════════════════ -->
+<div class="modal-overlay" id="modal-pp-comprar" onclick="if(event.target===this)fecharModal('modal-pp-comprar')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Criar Pedido de Compra</h2>
+      <button class="modal-close" onclick="fecharModal('modal-pp-comprar')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ppc-pendente-id"/>
+      <div class="fg"><label>Peça</label><input id="ppc-peca-nome" type="text" disabled/></div>
+      <div class="modal-grid-2">
+        <div class="fg"><label>Fornecedor *</label><select id="ppc-fornecedor"></select></div>
+        <div class="fg"><label>Quantidade *</label><input id="ppc-quantidade" type="number" min="1" value="1"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-pp-comprar')">Cancelar</button>
+      <button class="btn-primary" onclick="erpPedidoCompraSalvar()">Criar Pedido</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ MODAL VINCULAR PEÇA AO CHAMADO ══════════════════════ -->
+<div class="modal-overlay" id="modal-vincular-peca" onclick="if(event.target===this)fecharModal('modal-vincular-peca')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Vincular Peça ao Chamado</h2>
+      <button class="modal-close" onclick="fecharModal('modal-vincular-peca')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="vp-chamado-id"/>
+      <div class="fg"><label>Peça *</label><select id="vp-peca"></select></div>
+      <div class="fg"><label>Quantidade *</label><input id="vp-quantidade" type="number" min="1" value="1"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModal('modal-vincular-peca')">Cancelar</button>
+      <button class="btn-primary" onclick="erpVincularPecaSalvar()">Vincular</button>
     </div>
   </div>
 </div>
@@ -1506,6 +1564,7 @@
 <script src="js/boletos.js"></script>
 <script src="js/tecnicos.js"></script>
 <script src="js/chamados-admin.js"></script>
+<script src="js/pecas-pendentes.js"></script>
 <script src="js/chamados-analytics.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/usuarios-erp.js"></script>

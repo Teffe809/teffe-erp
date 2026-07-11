@@ -1,0 +1,23 @@
+-- URGENTE: RLS foi habilitado em erp_eventos (e provavelmente
+-- erp_eventos_vistos) em algum momento depois que a migration
+-- 20260711000000 foi aplicada — sem nenhuma policy. Isso não é só o sino
+-- ficando vazio: como erp_eventos é alimentada por TRIGGER AFTER INSERT/
+-- UPDATE em `chamados` e `solicitacoes_suprimento`, qualquer INSERT numa
+-- dessas tabelas, ou qualquer UPDATE que mude status_tecnico, passou a
+-- FALHAR E FAZER ROLLBACK DA OPERAÇÃO INTEIRA — confirmado ao vivo em
+-- produção (sondagem, revertido em seguida):
+--   PATCH chamados status_tecnico -> 'em_deslocamento'
+--   => 42501 "new row violates row-level security policy for table erp_eventos"
+--   => o UPDATE inteiro foi revertido (status_tecnico continuou o mesmo)
+-- Ou seja: desde que o RLS foi ligado nessa tabela, técnico não consegue
+-- mudar status de chamado (deslocamento/atendimento/aguardando peça/
+-- encerrar) e ninguém consegue abrir chamado ou solicitação de suprimento
+-- novos — não é só o sino que está quebrado.
+--
+-- Fix: mesma postura "sem RLS" de todas as outras tabelas deste projeto
+-- (ver comentário em chamado_status_historico, migration 20260707000001,
+-- e no rodapé da própria 20260711000000) — o app inteiro roda só com
+-- anon/authenticated key, sem policy nenhuma em lugar nenhum. Idempotente:
+-- não dá erro se RLS já estava desligado.
+ALTER TABLE erp_eventos DISABLE ROW LEVEL SECURITY;
+ALTER TABLE erp_eventos_vistos DISABLE ROW LEVEL SECURITY;

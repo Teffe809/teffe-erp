@@ -6,6 +6,7 @@ var _erpEventosCache = [];       // últimos eventos carregados (mais recente pr
 var _erpEventosVistosIds = {};   // { evento_id: true } já vistos pelo usuário atual, entre os carregados
 var _erpEventosCanal = null;
 var _erpEventosCarregados = false;
+var _erpEventosShakeTimer = null;
 
 var _EVENTOS_ICONE = {
   chamado_novo:        { icone: 'ti-alert-circle',   cor: '#DC2626' },
@@ -101,6 +102,9 @@ async function erpEventosAbrir() {
   document.getElementById('erp-eventos-painel').classList.add('open');
   if (!_erpEventosCarregados) await _erpEventosCarregar();
   await _erpEventosMarcarTodosVistos();
+  // Clicar no sino conta como interação — reinicia a contagem de "5 minutos
+  // sem clique" que controla a animação de chamar atenção.
+  _erpEventosAgendarShake();
 }
 
 function erpEventosFechar() {
@@ -156,4 +160,29 @@ function _erpEventosPararRealtime() {
   _erpEventosCache = [];
   _erpEventosVistosIds = {};
   _erpEventosCarregados = false;
+  _erpEventosPararShake();
+}
+
+// ── Animação "chamar atenção": se há evento não visto e ninguém clicou no
+// sino nos últimos 5 minutos, balança o ícone — repete a cada 5 minutos
+// (setInterval reinicia a cada clique, ver erpEventosAbrir) até zerar a
+// contagem de não vistos, quando o tick simplesmente vira um no-op.
+function _erpEventosAgendarShake() {
+  if (_erpEventosShakeTimer) clearInterval(_erpEventosShakeTimer);
+  _erpEventosShakeTimer = setInterval(function() {
+    var naoVistos = _erpEventosCache.filter(function(e) { return !_erpEventosVistosIds[e.id]; }).length;
+    if (naoVistos > 0) _erpEventosDispararShake();
+  }, 5 * 60 * 1000);
+}
+
+function _erpEventosPararShake() {
+  if (_erpEventosShakeTimer) { clearInterval(_erpEventosShakeTimer); _erpEventosShakeTimer = null; }
+}
+
+function _erpEventosDispararShake() {
+  var btn = document.getElementById('btn-sino-eventos');
+  if (!btn) return;
+  btn.classList.remove('sino-shake');
+  void btn.offsetWidth; // força reflow pra reiniciar a animação CSS mesmo se a classe já tivesse sido aplicada
+  btn.classList.add('sino-shake');
 }

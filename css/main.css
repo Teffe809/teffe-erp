@@ -312,6 +312,17 @@ input[type="password"] { text-transform: none !important; }
 .btn-sino:hover{background:rgba(255,255,255,.24);}
 .sino-badge{position:absolute;top:-4px;right:-4px;display:inline-flex;align-items:center;justify-content:center;background:#DC2626;color:#fff;font-size:10px;font-weight:700;border-radius:20px;min-width:17px;height:17px;padding:0 4px;line-height:1;border:2px solid var(--azul);}
 
+/* Chama atenção pra eventos não vistos — dispara a cada 5min via JS
+   (_erpEventosAgendarShake) enquanto houver não-vistos; para sozinha
+   porque é uma animação de duração fixa (não infinite), não um loop. */
+@keyframes sinoShake{
+  0%,100%{transform:rotate(0deg);}
+  10%,30%,50%,70%{transform:rotate(-14deg);}
+  20%,40%,60%,80%{transform:rotate(14deg);}
+  90%{transform:rotate(-4deg);}
+}
+.btn-sino.sino-shake{animation:sinoShake .6s ease-in-out;transform-origin:50% 0%;}
+
 .eventos-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1099;}
 .eventos-overlay.open{display:block;}
 .eventos-painel{position:fixed;top:0;right:0;bottom:0;width:380px;max-width:92vw;background:#fff;z-index:1100;box-shadow:-8px 0 30px rgba(0,0,0,.18);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;}

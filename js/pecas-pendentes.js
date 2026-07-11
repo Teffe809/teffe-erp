@@ -172,8 +172,12 @@ async function erpPecaMarcarEntregue(id) {
   var cr = await sf('/rest/v1/chamados?id=eq.' + p.chamado_id + '&select=id,numero,status_tecnico,sla_tempo_pausado,sla_pausa_inicio,created_at');
   var c = _arrOuVazio(cr)[0];
   if (c && c.status_tecnico === 'aguardando_peca') {
+    // Acumula em minutos ÚTEIS (via _slaMinutosUteis, chamados-analytics.js),
+    // não minutos corridos — mesma correção do bug de "SLA travado em 0:00"
+    // (uma pausa de dias/fim de semana em minutos corridos satura o
+    // Math.max(0, total-pausado) em 0 pra sempre).
     var totalPausado = c.sla_tempo_pausado || 0;
-    if (c.sla_pausa_inicio) totalPausado += Math.floor((Date.now() - new Date(c.sla_pausa_inicio).getTime()) / 60000);
+    if (c.sla_pausa_inicio) totalPausado += _slaMinutosUteis(c.sla_pausa_inicio, 0);
     var upd = await sf('/rest/v1/chamados?id=eq.' + c.id, {
       method: 'PATCH', headers: { 'Prefer': 'return=minimal' },
       body: JSON.stringify({ status_tecnico: 'peca_entregue', pecas_status: null, sla_pausado: false, sla_pausa_inicio: null, sla_tempo_pausado: totalPausado })

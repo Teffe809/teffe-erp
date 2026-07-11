@@ -217,9 +217,14 @@ function _slaChamadoDentro(chamado) {
   if (!abertura) return true;
   var tipo = chamado.tipo_servico || chamado.tipo_chamado || '';
   var limiteMin = TC_SLA_MINUTOS_POR_TIPO[tipo] || 720;
+  // BUG corrigido (SLA travado em 0:00): estava somando minutos CORRIDOS de
+  // pausa (Date.now() - sla_pausa_inicio em ms) num total calculado em
+  // minutos ÚTEIS — uma pausa que atravessa noite/fim de semana produz um
+  // valor corrido muito maior que o total útil, saturando em 0 pra sempre.
+  // Mede a pausa com a mesma régua (minutos úteis), via _slaMinutosUteis.
   var pausadoMin = chamado.sla_tempo_pausado || 0;
   if (chamado.sla_pausado && chamado.sla_pausa_inicio) {
-    pausadoMin += Math.floor((new Date() - new Date(chamado.sla_pausa_inicio)) / 60000);
+    pausadoMin += _slaMinutosUteis(chamado.sla_pausa_inicio, 0);
   }
   var decorridoMin = _slaMinutosUteis(abertura, pausadoMin);
   return decorridoMin <= limiteMin;

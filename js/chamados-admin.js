@@ -213,14 +213,18 @@ async function erpChamAbrirDetalhe(id) {
     : '';
 
   // Peças pendentes (Tarefa 2) — fluxo estruturado Faturar/Comprar/NF/
-  // Enviada/Entregue, criado a partir do pedido em texto livre que o
-  // técnico registrou (c.pecas_solicitadas, mostrado como contexto aqui).
-  // As ações (Faturar/Comprar/etc) ficam na tela dedicada "Peças
-  // Pendentes" — aqui é só leitura + o botão de vincular uma peça nova.
+  // Enviada/Entregue, criado a partir do pedido que o técnico registrou
+  // (c.pecas_solicitadas, mostrado como contexto aqui). Coluna é jsonb:
+  // fluxo antigo (texto livre) grava uma string JSON escalar; fluxo atual
+  // (carrinho, portal do técnico) grava um array de labels — normaliza os
+  // dois formatos pra exibição em vez de assumir sempre string.
+  var pecasSolicitadasTxt = Array.isArray(c.pecas_solicitadas)
+    ? c.pecas_solicitadas.join(', ')
+    : (c.pecas_solicitadas || '');
   var pecasPendentesHtml =
     '<div class="adm-det-section" style="margin-top:16px">' +
       '<div class="adm-det-label" style="margin-bottom:8px">Peças Pendentes (fluxo Faturar/Comprar)</div>' +
-      (c.pecas_solicitadas ? '<div style="font-size:12px;color:#6B7280;margin-bottom:8px">Pedido do técnico (texto livre): "' + _esc(c.pecas_solicitadas) + '"</div>' : '') +
+      (pecasSolicitadasTxt ? '<div style="font-size:12px;color:#6B7280;margin-bottom:8px">Pedido do técnico: "' + _esc(pecasSolicitadasTxt) + '"</div>' : '') +
       (pecasPendentes.length
         ? '<table class="erp-table"><thead><tr><th>Peça</th><th>Qtd</th><th>Status</th></tr></thead><tbody>' +
           pecasPendentes.map(function(p) {

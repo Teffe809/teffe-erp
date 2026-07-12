@@ -7,6 +7,7 @@ var _erpEventosVistosIds = {};   // { evento_id: true } já vistos pelo usuário
 var _erpEventosCanal = null;
 var _erpEventosCarregados = false;
 var _erpEventosShakeTimer = null;
+var _erpSomAtivo = localStorage.getItem('erp_som_sino') !== 'off'; // padrão: ligado
 
 var _EVENTOS_ICONE = {
   chamado_novo:        { icone: 'ti-alert-circle',   cor: '#DC2626' },
@@ -151,6 +152,10 @@ function _erpEventosIniciarRealtime() {
       if (document.getElementById('erp-eventos-painel').classList.contains('open')) {
         _erpEventosRenderLista();
       }
+      // Som toca só aqui — na chegada do evento em si — não a cada ciclo
+      // do shake (a cada ~5min); repetir o som junto com o shake pra uma
+      // notificação que já está pendente há um tempo ficaria incômodo.
+      _erpEventosTocarSom();
     })
     .subscribe();
 }
@@ -214,4 +219,54 @@ function _erpEventosDispararShake() {
   btn.classList.remove('sino-shake');
   void btn.offsetWidth; // força reflow pra reiniciar a animação CSS mesmo se a classe já tivesse sido aplicada
   btn.classList.add('sino-shake');
+}
+
+// ── SOM ──
+// Web Audio API em vez de arquivo de áudio: sem asset pra hospedar/manter,
+// sem depender de CDN de terceiro (disponibilidade/licença), sem request
+// de rede — um "ding" curto de duas parciais (fundamental + quinta acima,
+// decaimento exponencial rápido) soa como sino sem precisar de arquivo.
+var _erpAudioCtx = null;
+
+function erpToggleSom() {
+  _erpSomAtivo = !_erpSomAtivo;
+  localStorage.setItem('erp_som_sino', _erpSomAtivo ? 'on' : 'off');
+  _erpAtualizarIconeSom();
+  if (_erpSomAtivo) _erpEventosTocarSom(); // feedback imediato de "voltou a tocar"
+}
+
+function _erpAtualizarIconeSom() {
+  var icone = document.getElementById('icone-som');
+  if (!icone) return;
+  icone.className = 'ti ' + (_erpSomAtivo ? 'ti-volume' : 'ti-volume-off');
+}
+
+// Toca só na CHEGADA do evento em tempo real (ver _erpEventosIniciarRealtime)
+// — não a cada ciclo do shake (~5min), pra não ficar repetitivo/incômodo
+// numa notificação que já está pendente há um tempo.
+function _erpEventosTocarSom() {
+  if (!_erpSomAtivo) return;
+  try {
+    if (!_erpAudioCtx) _erpAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var ctx = _erpAudioCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+    var agora = ctx.currentTime;
+
+    [{ freq: 1046.5, vol: 0.18 }, { freq: 1568, vol: 0.09 }].forEach(function(parcial) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = parcial.freq;
+      gain.gain.setValueAtTime(0, agora);
+      gain.gain.linearRampToValueAtTime(parcial.vol, agora + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, agora + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(agora);
+      osc.stop(agora + 0.5);
+    });
+  } catch (e) {
+    // Web Audio indisponível/bloqueado (autoplay policy, navegador antigo
+    // etc.) — falha em silêncio, não deve quebrar o resto do sino.
+  }
 }

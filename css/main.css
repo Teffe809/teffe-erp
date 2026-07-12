@@ -312,6 +312,11 @@ input[type="password"] { text-transform: none !important; }
 .btn-sino:hover{background:rgba(255,255,255,.24);}
 .sino-badge{position:absolute;top:-4px;right:-4px;display:inline-flex;align-items:center;justify-content:center;background:#DC2626;color:#fff;font-size:10px;font-weight:700;border-radius:20px;min-width:17px;height:17px;padding:0 4px;line-height:1;border:2px solid var(--azul);}
 
+/* Mudo/som do sino — botão secundário, um pouco menor que o sino já que é
+   uma preferência auxiliar, não a ação principal. */
+.btn-som{background:none;border:none;color:rgba(255,255,255,.65);width:28px;height:28px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:background .2s,color .2s;}
+.btn-som:hover{background:rgba(255,255,255,.15);color:#fff;}
+
 /* Chama atenção pra eventos não vistos — checado a cada 20s via JS
    (_erpEventosChecarShake) contra um alvo de horário (não um único
    setInterval de 5min direto: throttling de aba em segundo plano faz um

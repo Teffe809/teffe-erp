@@ -275,6 +275,7 @@ function _mostrarApp(viewInicial) {
   _erpEventosCarregar();
   _erpEventosIniciarRealtime();
   _erpEventosAgendarShake();
+  _erpAtualizarIconeSom();
   carregarPecasPendentes(); // popula o badge da nav mesmo sem visitar a view (mesmo padrão do badge de Alertas)
 }
 

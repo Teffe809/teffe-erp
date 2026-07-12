@@ -312,16 +312,27 @@ input[type="password"] { text-transform: none !important; }
 .btn-sino:hover{background:rgba(255,255,255,.24);}
 .sino-badge{position:absolute;top:-4px;right:-4px;display:inline-flex;align-items:center;justify-content:center;background:#DC2626;color:#fff;font-size:10px;font-weight:700;border-radius:20px;min-width:17px;height:17px;padding:0 4px;line-height:1;border:2px solid var(--azul);}
 
-/* Chama atenção pra eventos não vistos — dispara a cada 5min via JS
-   (_erpEventosAgendarShake) enquanto houver não-vistos; para sozinha
-   porque é uma animação de duração fixa (não infinite), não um loop. */
+/* Chama atenção pra eventos não vistos — checado a cada 20s via JS
+   (_erpEventosChecarShake) contra um alvo de horário (não um único
+   setInterval de 5min direto: throttling de aba em segundo plano faz um
+   tick isolado se perder fácil, sem correção — ver comentário em
+   eventos.js). Amplitude aumentada (rotação maior + leve deslocamento
+   lateral + roda 2x seguidas) depois que a versão só-rotação/14deg passou
+   despercebida num teste real. Para sozinha porque é animação de duração
+   fixa (não infinite) — não precisa de lógica extra de "parar". */
 @keyframes sinoShake{
-  0%,100%{transform:rotate(0deg);}
-  10%,30%,50%,70%{transform:rotate(-14deg);}
-  20%,40%,60%,80%{transform:rotate(14deg);}
-  90%{transform:rotate(-4deg);}
+  0%,100%{transform:translateX(0) rotate(0deg);}
+  10%{transform:translateX(-4px) rotate(-24deg);}
+  20%{transform:translateX(4px) rotate(24deg);}
+  30%{transform:translateX(-4px) rotate(-22deg);}
+  40%{transform:translateX(4px) rotate(22deg);}
+  50%{transform:translateX(-3px) rotate(-16deg);}
+  60%{transform:translateX(3px) rotate(16deg);}
+  70%{transform:translateX(-2px) rotate(-10deg);}
+  80%{transform:translateX(2px) rotate(10deg);}
+  90%{transform:translateX(-1px) rotate(-4deg);}
 }
-.btn-sino.sino-shake{animation:sinoShake .6s ease-in-out;transform-origin:50% 0%;}
+.btn-sino.sino-shake{animation:sinoShake .8s cubic-bezier(.36,.07,.19,.97) 2;transform-origin:50% 15%;}
 
 .eventos-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1099;}
 .eventos-overlay.open{display:block;}

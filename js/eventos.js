@@ -164,19 +164,48 @@ function _erpEventosPararRealtime() {
 }
 
 // ── Animação "chamar atenção": se há evento não visto e ninguém clicou no
-// sino nos últimos 5 minutos, balança o ícone — repete a cada 5 minutos
-// (setInterval reinicia a cada clique, ver erpEventosAbrir) até zerar a
-// contagem de não vistos, quando o tick simplesmente vira um no-op.
+// sino nos últimos 5 minutos, balança o ícone.
+//
+// BUG do primeiro try (não reportado em teste simulado, só apareceu num
+// teste real de 5+ minutos com a aba parada): um único setInterval de 5
+// minutos não tem correção de atraso — se o navegador atrasar/pausar esse
+// timer mesmo uma vez (Chrome agressivamente throttla/"congela" timers de
+// abas em segundo plano depois de alguns minutos sem foco — "tab
+// freezing"/"intensive timer throttling"), o tick simplesmente não
+// dispara, e como é UM tick só a cada 5min, não sobra chance de recuperar
+// até o próximo ciclo (que sofre do mesmo problema). Testes com jsdom não
+// pegam isso porque jsdom não simula throttling de timer de navegador real
+// — só prova que a lógica funciona SE o tick disparar na hora certa, não
+// que ele vai disparar de fato numa aba real parada.
+//
+// Fix: em vez de confiar num único tick preciso de 5min, guarda o horário-
+// alvo (_erpEventosProximoShakeCheck) e reavalia com um poll curto (20s) —
+// bem mais resistente a throttling que um único intervalo longo — e TAMBÉM
+// reavalia na hora quando a aba volta a ficar visível (evento
+// visibilitychange), que é exatamente o gatilho de "usuário voltou depois
+// de a aba ter ficado em segundo plano/atrasada". Cobre o caso real que o
+// setInterval sozinho não cobria.
+var _erpEventosProximoShakeCheck = 0;
+
 function _erpEventosAgendarShake() {
-  if (_erpEventosShakeTimer) clearInterval(_erpEventosShakeTimer);
-  _erpEventosShakeTimer = setInterval(function() {
-    var naoVistos = _erpEventosCache.filter(function(e) { return !_erpEventosVistosIds[e.id]; }).length;
-    if (naoVistos > 0) _erpEventosDispararShake();
-  }, 5 * 60 * 1000);
+  _erpEventosProximoShakeCheck = Date.now() + 5 * 60 * 1000;
+  if (_erpEventosShakeTimer) return; // poll já rodando — só reinicia o alvo acima
+  _erpEventosShakeTimer = setInterval(_erpEventosChecarShake, 20 * 1000);
+  document.addEventListener('visibilitychange', _erpEventosChecarShake);
+}
+
+function _erpEventosChecarShake() {
+  if (document.visibilityState === 'hidden') return;
+  if (Date.now() < _erpEventosProximoShakeCheck) return;
+  var naoVistos = _erpEventosCache.filter(function(e) { return !_erpEventosVistosIds[e.id]; }).length;
+  if (naoVistos > 0) _erpEventosDispararShake();
+  _erpEventosProximoShakeCheck = Date.now() + 5 * 60 * 1000;
 }
 
 function _erpEventosPararShake() {
   if (_erpEventosShakeTimer) { clearInterval(_erpEventosShakeTimer); _erpEventosShakeTimer = null; }
+  document.removeEventListener('visibilitychange', _erpEventosChecarShake);
+  _erpEventosProximoShakeCheck = 0;
 }
 
 function _erpEventosDispararShake() {

@@ -87,7 +87,8 @@ var _ERP_VIEW_MODULO = {
   // Admin — antes ficava junto com Técnicos/Logs, sem como conceder acesso
   // a um sem conceder o outro. Solicitações de Suprimento entrou junto por
   // ser operacionalmente a mesma coisa (chamado de suprimento).
-  'chamados-admin': 'chamados', 'solicitacoes-suprimento': 'chamados', 'pecas-pendentes': 'chamados'
+  'chamados-admin': 'chamados', 'solicitacoes-suprimento': 'chamados', 'pecas-pendentes': 'chamados',
+  'teffe-power': 'teffe_power'
   // 'usuarios-erp' não entra aqui de propósito: é restrita a acesso_total (master),
   // não à permissão genérica 'admin' — ver checagem dedicada em erpShowView().
 };

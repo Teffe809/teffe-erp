@@ -151,6 +151,13 @@
         </button>
       </div>
 
+      <div class="sidebar-group" data-modulo="teffe_power">
+        <div class="sidebar-section">Teffe Power</div>
+        <button class="nav-item" id="nav-teffe-power" onclick="erpShowView('teffe-power')">
+          <i class="ti ti-printer"></i> <span class="nav-label">Teffe Power</span>
+        </button>
+      </div>
+
       <div class="sidebar-group" data-modulo="admin">
         <div class="sidebar-section">Admin</div>
         <button class="nav-item" id="nav-tecnicos" onclick="erpShowView('tecnicos')">
@@ -1553,7 +1560,16 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- TEFFE POWER -->
+      <div class="erp-view" id="view-teffe-power">
+        <div class="view-header">
+          <h1><i class="ti ti-printer"></i> Teffe Power</h1>
+          <button class="btn-primary" onclick="teffePowerCarregar()"><i class="ti ti-refresh"></i> Atualizar</button>
+        </div>
+        <div id="tp-table-wrap"></div>
+      </div>
+
+      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
 <script src="js/eventos.js"></script>
 <script src="js/estoque.js"></script>
@@ -1573,6 +1589,7 @@
 <script src="js/chamados-analytics.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/usuarios-erp.js"></script>
+<script src="js/teffe-power.js"></script>
 <script>
 // Unifica confirmarPagamento para receber/pagar/boleto
 async function confirmarPagamentoUnificado() {

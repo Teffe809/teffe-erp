@@ -557,6 +557,7 @@
       <div class="erp-view" id="view-teffe-power">
         <div class="view-header">
           <h1><i class="ti ti-printer"></i> Teffe Power</h1>
+          <button class="btn-primary" onclick="tpAbrirModalVincular()"><i class="ti ti-link"></i> Vincular Equipamento</button>
           <button class="btn-primary" onclick="teffePowerCarregar()"><i class="ti ti-refresh"></i> Atualizar</button>
         </div>
         <div id="tp-table-wrap"></div>
@@ -1568,6 +1569,38 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-tp-vincular" onclick="if(event.target===this)fecharModal('modal-tp-vincular')">
+  <div class="modal-box" style="width:96vw;max-width:600px;max-height:92vh;overflow:auto">
+    <div class="modal-header">
+      <h2><i class="ti ti-link"></i> Vincular Equipamento ao Teffe Power</h2>
+      <button class="modal-close" onclick="fecharModal('modal-tp-vincular')">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label>Buscar Cliente</label>
+        <input type="text" id="tp-busca-cliente" placeholder="Nome ou codigo do cliente" oninput="tpBuscarCliente()"/>
+        <div id="tp-resultado-cliente" style="margin-top:6px"></div>
+      </div>
+      <div class="fg" id="tp-wrap-contrato" style="display:none">
+        <label>Contrato</label>
+        <select id="tp-select-contrato"></select>
+      </div>
+      <div class="fg" id="tp-wrap-equipamento" style="display:none">
+        <label>Buscar Equipamento (instalado)</label>
+        <input type="text" id="tp-busca-equipamento" placeholder="Codigo Teffe, serial ou modelo" oninput="tpBuscarEquipamento()"/>
+        <div id="tp-resultado-equipamento" style="margin-top:6px"></div>
+      </div>
+      <div class="fg" id="tp-wrap-detalhes" style="display:none">
+        <div class="modal-grid-2">
+          <div class="fg"><label>IP Local</label><input type="text" id="tp-ip-local" placeholder="192.168.1.100"/></div>
+          <div class="fg"><label>SNMP Community</label><input type="text" id="tp-snmp-community" value="public"/></div>
+        </div>
+        <div id="tp-wrap-toner"></div>
+        <button class="btn-primary" onclick="tpSalvarVinculo()" style="margin-top:12px">Salvar Vinculo</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
 <script src="js/eventos.js"></script>

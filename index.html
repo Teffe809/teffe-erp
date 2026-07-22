@@ -560,7 +560,16 @@
           <button class="btn-primary" onclick="tpAbrirModalVincular()"><i class="ti ti-link"></i> Vincular Equipamento</button>
           <button class="btn-primary" onclick="teffePowerCarregar()"><i class="ti ti-refresh"></i> Atualizar</button>
         </div>
-        <div id="tp-table-wrap"></div>
+        <div id="tp-tela-lista">
+          <input type="text" id="tp-busca-lista" placeholder="Buscar por cliente, codigo ou serial" style="width:100%;max-width:400px;margin-bottom:12px;text-transform:uppercase" oninput="tpFiltrarClientes()"/>
+          <div id="tp-lista-clientes"></div>
+        </div>
+        <div id="tp-tela-dashboard" style="display:none">
+          <button class="btn-secondary" onclick="tpVoltarListaClientes()" style="margin-bottom:12px"><i class="ti ti-arrow-left"></i> Voltar</button>
+          <h2 id="tp-dash-cliente-nome" style="margin:0 0 12px"></h2>
+          <div id="tp-dash-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
+          <div id="tp-dash-tabela"></div>
+        </div>
       </div>
       <div class="erp-view" id="view-usuarios-erp">
         <div class="view-header">
@@ -1599,6 +1608,15 @@
         <button class="btn-primary" onclick="tpSalvarVinculo()" style="margin-top:12px">Salvar Vinculo</button>
       </div>
     </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-tp-log-erro" onclick="if(event.target===this)fecharModal('modal-tp-log-erro')">
+  <div class="modal-box" style="width:96vw;max-width:480px;max-height:80vh;overflow:auto">
+    <div class="modal-header">
+      <h2><i class="ti ti-alert-triangle"></i> Historico do Equipamento</h2>
+      <button class="modal-close" onclick="fecharModal('modal-tp-log-erro')">&#10005;</button>
+    </div>
+    <div class="modal-body" id="tp-log-erro-body"></div>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

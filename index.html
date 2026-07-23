@@ -153,7 +153,7 @@
 
       <div class="sidebar-group" data-modulo="teffe_power">
         <div class="sidebar-section">Teffe Power</div>
-        <button class="nav-item" id="nav-teffe-power" onclick="erpShowView('teffe-power')">
+        <button class="nav-item" id="nav-teffe-power" onclick="erpShowView('teffe-power');teffePowerCarregar()">
           <i class="ti ti-printer"></i> <span class="nav-label">Teffe Power</span>
         </button>
       </div>
@@ -1230,6 +1230,15 @@
       <div class="fg" style="display:none">
         <label>Código do Cliente</label>
         <input id="mcli-codigo" type="text" readonly style="background:#F9FAFB;color:#16A34A;font-family:monospace;font-weight:700;width:120px"/>
+      </div>
+      <div class="fg" id="mcli-licenca-wrap" style="display:none">
+        <label>Licenca Teffe Power</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span id="mcli-licenca-valor" style="font-family:monospace;font-weight:700;font-size:15px;letter-spacing:1px;background:#F9FAFB;padding:6px 10px;border-radius:6px"></span>
+          <button class="btn-secondary" type="button" onclick="copiarLicencaCliente()">Copiar</button>
+          <button class="btn-secondary" type="button" data-master-only="true" style="color:#B91C1C" onclick="excluirLicencaCliente()">Excluir Licenca</button>
+        </div>
+        <p id="mcli-licenca-status" style="font-size:12px;color:#6B7280;margin:4px 0 0"></p>
       </div>
       <div class="modal-grid-2">
         <div class="fg"><label>Razão Social *</label><input id="mcli-razao" type="text" placeholder="Razão Social"/></div>

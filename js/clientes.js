@@ -98,7 +98,57 @@ async function abrirModalCliente(c) {
   document.getElementById('mcli-email').value = c ? (c.email || '') : '';
   document.getElementById('mcli-site').value = c ? (c.site || '') : '';
   document.getElementById('mcli-ativo').checked = c ? !!c.ativo : true;
+  carregarLicencaCliente(c ? c.id : null);
   document.getElementById('modal-cliente').classList.add('open');
+}
+
+async function carregarLicencaCliente(clienteId) {
+  var wrap = document.getElementById('mcli-licenca-wrap');
+  var valorEl = document.getElementById('mcli-licenca-valor');
+  var statusEl = document.getElementById('mcli-licenca-status');
+  if (!clienteId) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = 'block';
+  valorEl.textContent = 'Carregando...';
+  statusEl.textContent = '';
+
+  var { data, ok } = await sf('/rest/v1/poder_licencas?cliente_id=eq.' + clienteId + '&ativa=eq.true&select=licenca,criado_em');
+  if (ok && data && data.length) {
+    valorEl.textContent = data[0].licenca;
+    statusEl.textContent = 'Gerada em ' + new Date(data[0].criado_em).toLocaleString('pt-BR');
+  } else {
+    valorEl.textContent = 'Sem licenca ativa';
+    statusEl.textContent = '';
+  }
+}
+
+function copiarLicencaCliente() {
+  var valor = document.getElementById('mcli-licenca-valor').textContent;
+  if (!valor || valor === 'Carregando...' || valor === 'Sem licenca ativa') return;
+  navigator.clipboard.writeText(valor).then(function () {
+    var statusEl = document.getElementById('mcli-licenca-status');
+    var original = statusEl.textContent;
+    statusEl.textContent = 'Copiado!';
+    setTimeout(function () { statusEl.textContent = original; }, 1500);
+  });
+}
+
+async function excluirLicencaCliente() {
+  var clienteId = document.getElementById('mcli-id').value;
+  if (!clienteId) return;
+  if (!_erpPerfil || !_erpPerfil.acesso_total) { alert('Apenas usuarios master podem excluir licencas.'); return; }
+  if (!confirm('Excluir a licenca deste cliente? O Teffe Power instalado vai parar de validar. Esta acao fica registrada em log.')) return;
+
+  var payload = {
+    ativa: false,
+    excluida_em: new Date().toISOString(),
+    excluida_por: (_erpPerfil.id || null)
+  };
+  var { ok, data } = await sf('/rest/v1/poder_licencas?cliente_id=eq.' + clienteId + '&ativa=eq.true', { method: 'PATCH', body: JSON.stringify(payload) });
+  if (!ok) { alert('Erro ao excluir licenca: ' + JSON.stringify(data)); return; }
+
+  registrarLog('licenca_teffe_power_excluida', { cliente_id: clienteId, por: _erpPerfil.email });
+  carregarLicencaCliente(clienteId);
 }
 
 async function buscarCEP() {

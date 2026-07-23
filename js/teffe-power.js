@@ -306,6 +306,15 @@ async function tpSalvarVinculo() {
     capacidade = { black: parseInt(document.getElementById('tp-cap-black').value) || null };
   }
 
+  var chkDup = await sf('/rest/v1/poder_equipamentos?equipamento_id=eq.' + _tpEquipamentoSelecionado.id + '&ativo=eq.true&select=id');
+  if (chkDup.ok && chkDup.data && chkDup.data.length) {
+    alert('Este equipamento ja esta vinculado ao Teffe Power. Nao e possivel vincular duas vezes.');
+    return;
+  }
+
+  var btnSalvar = document.querySelector('#modal-tp-vincular .btn-primary[onclick="tpSalvarVinculo()"]');
+  if (btnSalvar) { btnSalvar.disabled = true; btnSalvar.textContent = 'Salvando...'; }
+
   var payload = {
     equipamento_id: _tpEquipamentoSelecionado.id,
     cliente_id: _tpClienteSelecionado.id,
@@ -318,8 +327,13 @@ async function tpSalvarVinculo() {
   };
 
   var { ok, data } = await sf('/rest/v1/poder_equipamentos', { method: 'POST', headers: { 'Prefer': 'return=minimal' }, body: JSON.stringify(payload) });
-  if (!ok) { alert('Erro ao vincular equipamento: ' + JSON.stringify(data)); return; }
+  if (!ok) {
+    alert('Erro ao vincular equipamento: ' + JSON.stringify(data));
+    if (btnSalvar) { btnSalvar.disabled = false; btnSalvar.textContent = 'Salvar Vinculo'; }
+    return;
+  }
 
+  alert('Equipamento vinculado com sucesso!');
   fecharModal('modal-tp-vincular');
   teffePowerCarregar();
 }

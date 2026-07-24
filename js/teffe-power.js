@@ -256,10 +256,17 @@ async function tpSelecionarCliente(c) {
 async function tpBuscarEquipamento() {
   var termo = document.getElementById('tp-busca-equipamento').value.trim();
   var wrap = document.getElementById('tp-resultado-equipamento');
+  var contratoId = document.getElementById('tp-select-contrato').value;
+  if (!contratoId) { wrap.innerHTML = '<div style="color:#B45309;font-size:13px">Selecione um contrato antes de buscar o equipamento.</div>'; return; }
   if (termo.length < 3) { wrap.innerHTML = ''; return; }
+
+  var vinculo = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + contratoId + '&select=equipamento_id');
+  var idsContrato = (vinculo.data || []).map(function (v) { return v.equipamento_id; });
+  if (!idsContrato.length) { wrap.innerHTML = '<div style="color:#B45309;font-size:13px">Este contrato nao possui equipamentos cadastrados.</div>'; return; }
+
   var enc = encodeURIComponent(termo);
-  var { data, ok } = await sf('/rest/v1/equipamentos?status=eq.instalado&or=(codigo_teffe.ilike.*' + enc + '*,serial.ilike.*' + enc + '*,modelo.ilike.*' + enc + '*,marca.ilike.*' + enc + '*)&select=id,codigo_teffe,marca,modelo,serial,tipo_impressao&limit=8');
-  if (!ok || !data || !data.length) { wrap.innerHTML = '<div style="color:#6B7280;font-size:13px">Nenhum equipamento instalado encontrado.</div>'; return; }
+  var { data, ok } = await sf('/rest/v1/equipamentos?id=in.(' + idsContrato.join(',') + ')&status=eq.instalado&or=(codigo_teffe.ilike.*' + enc + '*,serial.ilike.*' + enc + '*,modelo.ilike.*' + enc + '*,marca.ilike.*' + enc + '*)&select=id,codigo_teffe,marca,modelo,serial,tipo_impressao&limit=8');
+  if (!ok || !data || !data.length) { wrap.innerHTML = '<div style="color:#6B7280;font-size:13px">Nenhum equipamento deste contrato encontrado com esse termo.</div>'; return; }
   wrap.innerHTML = data.map(function (e) {
     return '<div class="tp-resultado-item" style="padding:8px;border:0.5px solid #E5E7EB;border-radius:6px;margin-bottom:4px;cursor:pointer" onclick=\'tpSelecionarEquipamento(' + JSON.stringify(e) + ')\'><strong>' + _esc(e.codigo_teffe) + '</strong> - ' + _esc(e.marca) + ' ' + _esc(e.modelo) + ' <small style="color:#6B7280">S/N ' + _esc(e.serial || '-') + '</small></div>';
   }).join('');

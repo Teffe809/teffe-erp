@@ -47,6 +47,7 @@ async function teffePowerCarregar() {
       modelo: eq.modelo || '',
       serial: eq.serial || '',
       tipo_impressao: eq.tipo_impressao || 'monocromatico',
+      ip_local: e.ip_local || '',
       capacidade_toner: e.capacidade_toner || {},
       ultimaLeitura: leiturasMap[e.id] || null
     };
@@ -125,48 +126,48 @@ function tpAbrirDashboardCliente(clienteId) {
   var alertas = itens.filter(function (i) { return i.ultimaLeitura && i.ultimaLeitura.status !== 'ok'; }).length;
   var contadorTotalFrota = itens.reduce(function (acc, i) { return acc + (i.ultimaLeitura && i.ultimaLeitura.contador_total ? i.ultimaLeitura.contador_total : 0); }, 0);
 
-  var tonerValores = [];
+  var percentuaisGerais = [];
   itens.forEach(function (i) {
     if (i.ultimaLeitura && i.ultimaLeitura.niveis_toner) {
-      Object.values(i.ultimaLeitura.niveis_toner).forEach(function (v) { if (v != null) tonerValores.push(v); });
+      Object.values(i.ultimaLeitura.niveis_toner).forEach(function (c) { if (c && c.percentual != null) percentuaisGerais.push(c.percentual); });
     }
   });
-  var tonerMedio = tonerValores.length ? Math.round(tonerValores.reduce(function (a, b) { return a + b; }, 0) / tonerValores.length) : null;
+  var tonerMedio = percentuaisGerais.length ? Math.round(percentuaisGerais.reduce(function (a, b) { return a + b; }, 0) / percentuaisGerais.length) : null;
 
   document.getElementById('tp-dash-kpis').innerHTML =
     '<div style="background:#F9FAFB;border-radius:8px;padding:14px"><p style="font-size:12px;color:#6B7280;margin:0 0 6px">Equipamentos</p><p style="font-size:22px;font-weight:500;margin:0">' + itens.length + '</p></div>' +
     '<div style="background:#F9FAFB;border-radius:8px;padding:14px"><p style="font-size:12px;color:#6B7280;margin:0 0 6px">Alertas Ativos</p><p style="font-size:22px;font-weight:500;margin:0;color:' + (alertas ? '#B45309' : '#111827') + '">' + alertas + '</p></div>' +
     '<div style="background:#F9FAFB;border-radius:8px;padding:14px"><p style="font-size:12px;color:#6B7280;margin:0 0 6px">Contador Total da Frota</p><p style="font-size:22px;font-weight:500;margin:0">' + contadorTotalFrota.toLocaleString('pt-BR') + '</p></div>' +
-    '<div style="background:#F9FAFB;border-radius:8px;padding:14px"><p style="font-size:12px;color:#6B7280;margin:0 0 6px">Toner Médio</p><p style="font-size:22px;font-weight:500;margin:0">' + (tonerMedio != null ? tonerMedio + '%' : '—') + '</p></div>';
+    '<div style="background:#F9FAFB;border-radius:8px;padding:14px"><p style="font-size:12px;color:#6B7280;margin:0 0 6px">Media Geral de Consumiveis</p><p style="font-size:22px;font-weight:500;margin:0">' + (tonerMedio != null ? tonerMedio + '%' : '-') + '</p></div>';
 
   var rows = itens.map(function (i) {
     var l = i.ultimaLeitura;
     var statusBadge = '<span class="badge" style="background:#F3F4F6;color:#6B7280">Sem leitura</span>';
-    var contadorHtml = '—';
-    var tonerHtml = '—';
-    var ultimaData = '—';
+    var contadorHtml = '-';
+    var resumoConsumiveis = '<span style="color:#9CA3AF;font-size:12px">sem dados</span>';
+    var ultimaData = '-';
 
     if (l) {
       if (l.status === 'ok') {
         statusBadge = '<span class="badge" style="background:#DCFCE7;color:#15803D">Funcionando normalmente</span>';
       } else if (l.status === 'alerta_toner') {
-        statusBadge = '<span onclick="tpAbrirLogErro(\'' + i.poder_id + '\')" class="badge" style="background:#FEF3C7;color:#B45309;cursor:pointer">' + _esc(l.mensagem_status || 'Nível de toner baixo') + '</span>';
+        statusBadge = '<span class="badge" style="background:#FEF3C7;color:#B45309">' + _esc(l.mensagem_status || 'Nivel de toner baixo') + '</span>';
       } else if (l.status === 'erro') {
-        statusBadge = '<span onclick="tpAbrirLogErro(\'' + i.poder_id + '\')" class="badge" style="background:#FEE2E2;color:#B91C1C;cursor:pointer">' + _esc(l.mensagem_status || 'Erro detectado') + '</span>';
+        statusBadge = '<span class="badge" style="background:#FEE2E2;color:#B91C1C">' + _esc(l.mensagem_status || 'Erro detectado') + '</span>';
       }
 
-      if (i.tipo_impressao === 'colorida' || i.tipo_impressao === 'colorido') {
-        contadorHtml = 'Cor ' + (l.contador_cor != null ? l.contador_cor.toLocaleString('pt-BR') : '—') + '<br>PB ' + (l.contador_pb != null ? l.contador_pb.toLocaleString('pt-BR') : '—');
-      } else {
-        contadorHtml = l.contador_total != null ? l.contador_total.toLocaleString('pt-BR') : '—';
-      }
+      contadorHtml = l.contador_total != null ? l.contador_total.toLocaleString('pt-BR') : '-';
 
-      if (l.niveis_toner) {
-        var t = l.niveis_toner;
-        if (i.tipo_impressao === 'colorida' || i.tipo_impressao === 'colorido') {
-          tonerHtml = 'C ' + (t.cyan != null ? t.cyan + '%' : '—') + ' M ' + (t.magenta != null ? t.magenta + '%' : '—') + '<br>Y ' + (t.yellow != null ? t.yellow + '%' : '—') + ' K ' + (t.black != null ? t.black + '%' : '—');
-        } else {
-          tonerHtml = 'PB ' + (t.black != null ? t.black + '%' : '—');
+      if (l.niveis_toner && Object.keys(l.niveis_toner).length) {
+        var itensConsumiveis = Object.values(l.niveis_toner);
+        var piorItem = itensConsumiveis.reduce(function (pior, atual) {
+          if (atual.percentual == null) return pior;
+          if (!pior || pior.percentual == null || atual.percentual < pior.percentual) return atual;
+          return pior;
+        }, null);
+        if (piorItem && piorItem.percentual != null) {
+          var corPior = piorItem.percentual > 50 ? '#15803D' : (piorItem.percentual > 20 ? '#B45309' : '#B91C1C');
+          resumoConsumiveis = '<span style="color:' + corPior + ';font-weight:600">' + _esc(piorItem.descricao) + ': ' + piorItem.percentual + '%</span> <small style="color:#9CA3AF">(+' + (itensConsumiveis.length - 1) + ')</small>';
         }
       }
       ultimaData = new Date(l.data_hora).toLocaleString('pt-BR');
@@ -176,12 +177,86 @@ function tpAbrirDashboardCliente(clienteId) {
       '<td><strong>' + _esc(i.codigo_teffe) + '</strong> ' + _esc(i.marca) + ' ' + _esc(i.modelo) + '<br><small style="color:#6B7280">S/N ' + _esc(i.serial || '-') + '</small></td>' +
       '<td>' + statusBadge + '</td>' +
       '<td>' + contadorHtml + '</td>' +
-      '<td>' + tonerHtml + '</td>' +
+      '<td>' + resumoConsumiveis + '</td>' +
       '<td style="font-size:12px;color:#6B7280">' + ultimaData + '</td>' +
+      '<td><button class="btn-secondary" onclick="tpAbrirModalConsumiveis(''' + i.poder_id + ''')">Ver detalhes</button></td>' +
       '</tr>';
   }).join('');
 
-  document.getElementById('tp-dash-tabela').innerHTML = '<table class="erp-table"><thead><tr><th>Equipamento</th><th>Status</th><th>Contador</th><th>Toner</th><th>Última Leitura</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  document.getElementById('tp-dash-tabela').innerHTML = '<table class="erp-table"><thead><tr><th>Equipamento</th><th>Status</th><th>Contador</th><th>Consumiveis</th><th>Ultima Leitura</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function tpAbrirModalConsumiveis(poderId) {
+  var item = _tpDadosClientes.find(function (i) { return i.poder_id === poderId; });
+  var body = document.getElementById('tp-consumiveis-body');
+  document.getElementById('modal-tp-consumiveis').classList.add('open');
+
+  if (!item) {
+    body.innerHTML = '<div style="text-align:center;color:#F87171;padding:30px">Equipamento nao encontrado.</div>';
+    return;
+  }
+
+  var l = item.ultimaLeitura;
+
+  var cabecalho =
+    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #1e3a5f">' +
+    '<div style="width:52px;height:52px;border-radius:50%;background:radial-gradient(circle,#1e3a8a,#0f172a);display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(59,130,246,0.4)">🛰️</div>' +
+    '<div>' +
+    '<p style="margin:0;font-size:16px;font-weight:700;color:#F1F5F9">' + _esc(item.codigo_teffe) + ' &middot; ' + _esc(item.marca) + ' ' + _esc(item.modelo) + '</p>' +
+    '<p style="margin:2px 0 0;font-size:12px;color:#64748B">S/N ' + _esc(item.serial || '-') + (item.ip_local ? ' &middot; IP ' + _esc(item.ip_local) : '') + '</p>' +
+    '</div></div>';
+
+  if (!l) {
+    body.innerHTML = cabecalho + '<div style="text-align:center;color:#64748B;padding:30px">Nenhuma leitura registrada ainda.</div>';
+    return;
+  }
+
+  var statusCor = '#4ADE80';
+  var statusTexto = 'Operando normalmente';
+  if (l.status === 'alerta_toner') { statusCor = '#FBBF24'; statusTexto = l.mensagem_status || 'Alerta'; }
+  if (l.status === 'erro') { statusCor = '#F87171'; statusTexto = l.mensagem_status || 'Erro detectado'; }
+
+  var statusHtml =
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid #1e3a5f;border-radius:10px">' +
+    '<span style="width:10px;height:10px;border-radius:50%;background:' + statusCor + ';box-shadow:0 0 10px ' + statusCor + ';flex-shrink:0"></span>' +
+    '<span style="color:' + statusCor + ';font-weight:600;font-size:14px">' + _esc(statusTexto) + '</span>' +
+    '<span style="margin-left:auto;color:#64748B;font-size:12px">' + new Date(l.data_hora).toLocaleString('pt-BR') + '</span>' +
+    '</div>';
+
+  var contadorHtml =
+    '<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:22px">' +
+    '<div style="background:rgba(255,255,255,0.03);border:1px solid #1e3a5f;border-radius:10px;padding:14px 16px">' +
+    '<p style="margin:0;font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:0.5px">Contador Total</p>' +
+    '<p style="margin:4px 0 0;font-size:26px;font-weight:700;color:#F1F5F9">' + (l.contador_total != null ? l.contador_total.toLocaleString('pt-BR') : '-') + '<span style="font-size:13px;color:#64748B;font-weight:400"> paginas</span></p>' +
+    '</div></div>';
+
+  var barrasHtml = '<p style="margin:0 0 12px;font-size:12px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px">Consumiveis e Vida Util</p>';
+  var itensConsumiveis = l.niveis_toner ? Object.values(l.niveis_toner) : [];
+
+  if (!itensConsumiveis.length) {
+    barrasHtml += '<div style="text-align:center;color:#64748B;padding:20px;background:rgba(255,255,255,0.02);border-radius:10px">Este equipamento nao reportou dados de consumiveis.</div>';
+  } else {
+    barrasHtml += itensConsumiveis.map(function (c) {
+      var pct = c.percentual != null ? c.percentual : null;
+      var corBarra = '#3B82F6';
+      if (pct != null) {
+        corBarra = pct > 50 ? '#22C55E' : (pct > 20 ? '#FBBF24' : '#EF4444');
+      }
+      var largura = pct != null ? pct : 0;
+      var textoPct = pct != null ? pct + '%' : 'sem dado';
+
+      return '<div style="margin-bottom:16px">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
+        '<span style="font-size:13px;color:#E2E8F0;font-weight:500">' + _esc(c.descricao) + '</span>' +
+        '<span style="font-size:13px;color:' + corBarra + ';font-weight:700">' + textoPct + '</span>' +
+        '</div>' +
+        '<div style="height:10px;background:rgba(255,255,255,0.06);border-radius:6px;overflow:hidden;border:1px solid #1e3a5f">' +
+        '<div style="height:100%;width:' + largura + '%;background:linear-gradient(90deg,' + corBarra + 'aa,' + corBarra + ');border-radius:6px;transition:width 0.6s ease;box-shadow:0 0 8px ' + corBarra + '88"></div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  body.innerHTML = cabecalho + statusHtml + contadorHtml + barrasHtml;
 }
 
 async function tpAbrirLogErro(poderId) {

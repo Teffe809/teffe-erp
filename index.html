@@ -1683,5 +1683,16 @@ async function confirmarPagamentoUnificado() {
   </div>
   <div id="eventos-lista" class="eventos-lista"></div>
 </aside>
+<div class="modal-overlay" id="modal-tp-consumiveis" onclick="if(event.target===this)fecharModal('modal-tp-consumiveis')" style="background:rgba(2,6,23,0.85)">
+  <div class="modal-box" style="width:96vw;max-width:640px;max-height:92vh;overflow:auto;background:radial-gradient(ellipse at top, #0f1b3d 0%, #030712 70%);border:1px solid #1e3a5f;box-shadow:0 0 40px rgba(59,130,246,0.25);color:#E2E8F0">
+    <div class="modal-header" style="border-bottom:1px solid #1e3a5f">
+      <h2 style="color:#60A5FA;text-shadow:0 0 12px rgba(96,165,250,0.6)"><i class="ti ti-satellite"></i> Painel de Diagnostico</h2>
+      <button class="modal-close" style="color:#94A3B8" onclick="fecharModal('modal-tp-consumiveis')">&#10005;</button>
+    </div>
+    <div class="modal-body" id="tp-consumiveis-body" style="padding:20px">
+      <div style="text-align:center;color:#64748B;padding:30px">Carregando...</div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

@@ -372,6 +372,20 @@ function tpSelecionarEquipamento(e) {
   }
 }
 
+var TP_CHAVE_SENHA_WEB = "b8f3a1e9c7d24f6081a9b3e5c7d2f4a6b8f3a1e9c7d24f6081a9b3e5c7d2f4a6";
+
+async function tpCriptografarSenhaWeb(textoPlano) {
+  if (!textoPlano) return null;
+  var chaveBytes = new Uint8Array(TP_CHAVE_SENHA_WEB.match(/.{2}/g).map(function (h) { return parseInt(h, 16); }));
+  var chave = await crypto.subtle.importKey("raw", chaveBytes, { name: "AES-GCM" }, false, ["encrypt"]);
+  var iv = crypto.getRandomValues(new Uint8Array(12));
+  var dados = new TextEncoder().encode(textoPlano);
+  var cifrado = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, chave, dados);
+  var ivHex = Array.from(iv).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+  var cifradoHex = Array.from(new Uint8Array(cifrado)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+  return ivHex + ":" + cifradoHex;
+}
+
 async function tpSalvarVinculo() {
   if (!_tpClienteSelecionado) { alert('Selecione um cliente.'); return; }
   if (!_tpEquipamentoSelecionado) { alert('Selecione um equipamento.'); return; }
@@ -392,6 +406,9 @@ async function tpSalvarVinculo() {
     capacidade = { black: parseInt(document.getElementById('tp-cap-black').value) || null };
   }
 
+  var senhaWebPlano = document.getElementById('tp-senha-web').value.trim();
+  var senhaWebEnc = senhaWebPlano ? await tpCriptografarSenhaWeb(senhaWebPlano) : null;
+
   var chkDup = await sf('/rest/v1/poder_equipamentos?equipamento_id=eq.' + _tpEquipamentoSelecionado.id + '&ativo=eq.true&select=id');
   if (chkDup.ok && chkDup.data && chkDup.data.length) {
     alert('Este equipamento ja esta vinculado ao Teffe Power. Nao e possivel vincular duas vezes.');
@@ -408,6 +425,7 @@ async function tpSalvarVinculo() {
     ip_local: ip || null,
     snmp_community: community,
     capacidade_toner: capacidade,
+    senha_web_enc: senhaWebEnc,
     status_pareamento: 'pendente',
     ativo: true
   };

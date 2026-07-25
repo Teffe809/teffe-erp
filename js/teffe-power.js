@@ -236,6 +236,14 @@ function tpAbrirModalConsumiveis(poderId) {
 
   var barrasHtml = '<p style="margin:0 0 12px;font-size:12px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px">Consumiveis e Vida Util</p>';
   var itensConsumiveis = l.niveis_toner ? Object.values(l.niveis_toner) : [];
+  if (l.vida_util_extra) {
+    var vu = l.vida_util_extra;
+    if (vu.drum_unit_percentual != null) itensConsumiveis.push({ descricao: 'Drum Unit', percentual: vu.drum_unit_percentual });
+    if (vu.fuser_unit && vu.fuser_unit.percentual != null) itensConsumiveis.push({ descricao: 'Fuser Unit', percentual: vu.fuser_unit.percentual });
+    if (vu.laser_unit && vu.laser_unit.percentual != null) itensConsumiveis.push({ descricao: 'Laser Unit', percentual: vu.laser_unit.percentual });
+    if (vu.paper_feeding_kit_mp && vu.paper_feeding_kit_mp.percentual != null) itensConsumiveis.push({ descricao: 'Paper Feeding Kit MP', percentual: vu.paper_feeding_kit_mp.percentual });
+    if (vu.paper_feeding_kit_1 && vu.paper_feeding_kit_1.percentual != null) itensConsumiveis.push({ descricao: 'Paper Feeding Kit 1', percentual: vu.paper_feeding_kit_1.percentual });
+  }
 
   if (!itensConsumiveis.length) {
     barrasHtml += '<div style="text-align:center;color:#64748B;padding:20px;background:rgba(255,255,255,0.02);border-radius:10px">Este equipamento nao reportou dados de consumiveis.</div>';

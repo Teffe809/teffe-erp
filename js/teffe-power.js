@@ -179,7 +179,7 @@ function tpAbrirDashboardCliente(clienteId) {
       '<td>' + contadorHtml + '</td>' +
       '<td>' + resumoConsumiveis + '</td>' +
       '<td style="font-size:12px;color:#6B7280">' + ultimaData + '</td>' +
-      '<td><button class="btn-secondary" onclick="tpAbrirModalConsumiveis(''' + i.poder_id + ''')">Ver detalhes</button></td>' +
+      '<td><button class="btn-secondary" onclick="tpAbrirModalConsumiveis(\'' + i.poder_id + '\')">Ver detalhes</button></td>' +
       '</tr>';
   }).join('');
 

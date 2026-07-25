@@ -22,7 +22,7 @@ async function teffePowerCarregar() {
   var equipamentoIds = [...new Set(data.map(function (e) { return e.equipamento_id; }).filter(Boolean))];
   var equipamentosMap = {};
   if (equipamentoIds.length) {
-    var respE = await sf('/rest/v1/equipamentos?id=in.(' + equipamentoIds.join(',') + ')&select=id,codigo_teffe,marca,modelo,serial,tipo_impressao');
+    var respE = await sf('/rest/v1/equipamentos?id=in.(' + equipamentoIds.join(',') + ')&select=id,codigo_teffe,marca,modelo,serial,tipo_impressao,contato_snmp,localizacao');
     if (respE.data) respE.data.forEach(function (eq) { equipamentosMap[eq.id] = eq; });
   }
 
@@ -47,6 +47,8 @@ async function teffePowerCarregar() {
       modelo: eq.modelo || '',
       serial: eq.serial || '',
       tipo_impressao: eq.tipo_impressao || 'monocromatico',
+      contato_snmp: eq.contato_snmp || '',
+      localizacao: eq.localizacao || '',
       ip_local: e.ip_local || '',
       capacidade_toner: e.capacidade_toner || {},
       ultimaLeitura: leiturasMap[e.id] || null
@@ -204,6 +206,8 @@ function tpAbrirModalConsumiveis(poderId) {
     '<div>' +
     '<p style="margin:0;font-size:16px;font-weight:700;color:#F1F5F9">' + _esc(item.codigo_teffe) + ' &middot; ' + _esc(item.marca) + ' ' + _esc(item.modelo) + '</p>' +
     '<p style="margin:2px 0 0;font-size:12px;color:#64748B">S/N ' + _esc(item.serial || '-') + (item.ip_local ? ' &middot; IP ' + _esc(item.ip_local) : '') + '</p>' +
+    (item.localizacao ? '<p style="margin:2px 0 0;font-size:12px;color:#64748B"><i class="ti ti-map-pin" style="font-size:12px"></i> ' + _esc(item.localizacao) + '</p>' : '') +
+    (item.contato_snmp ? '<p style="margin:2px 0 0;font-size:12px;color:#64748B"><i class="ti ti-user" style="font-size:12px"></i> ' + _esc(item.contato_snmp) + '</p>' : '') +
     '</div></div>';
 
   if (!l) {

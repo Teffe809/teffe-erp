@@ -200,7 +200,7 @@ function tpAbrirModalConsumiveis(poderId) {
 
   var cabecalho =
     '<div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #1e3a5f">' +
-    '<div style="width:52px;height:52px;border-radius:50%;background:radial-gradient(circle,#1e3a8a,#0f172a);display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 20px rgba(59,130,246,0.4)">🛰️</div>' +
+    '<div style="width:52px;height:52px;border-radius:50%;background:radial-gradient(circle,#1e3a8a,#0f172a);display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(59,130,246,0.4)"><i class="ti ti-printer" style="font-size:24px;color:#93C5FD"></i></div>' +
     '<div>' +
     '<p style="margin:0;font-size:16px;font-weight:700;color:#F1F5F9">' + _esc(item.codigo_teffe) + ' &middot; ' + _esc(item.marca) + ' ' + _esc(item.modelo) + '</p>' +
     '<p style="margin:2px 0 0;font-size:12px;color:#64748B">S/N ' + _esc(item.serial || '-') + (item.ip_local ? ' &middot; IP ' + _esc(item.ip_local) : '') + '</p>' +
@@ -220,7 +220,7 @@ function tpAbrirModalConsumiveis(poderId) {
     '<div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid #1e3a5f;border-radius:10px">' +
     '<span style="width:10px;height:10px;border-radius:50%;background:' + statusCor + ';box-shadow:0 0 10px ' + statusCor + ';flex-shrink:0"></span>' +
     '<span style="color:' + statusCor + ';font-weight:600;font-size:14px">' + _esc(statusTexto) + '</span>' +
-    '<span style="margin-left:auto;color:#64748B;font-size:12px">' + new Date(l.data_hora).toLocaleString('pt-BR') + '</span>' +
+    '<span style="margin-left:auto;color:#64748B;font-size:12px">Ultima leitura: ' + new Date(l.data_hora).toLocaleString('pt-BR') + '</span>' +
     '</div>';
 
   var contadorHtml =

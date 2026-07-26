@@ -238,7 +238,8 @@ function tpAbrirModalConsumiveis(poderId) {
   var itensConsumiveis = l.niveis_toner ? Object.values(l.niveis_toner) : [];
   if (l.vida_util_extra) {
     var vu = l.vida_util_extra;
-    if (vu.drum_unit_percentual != null) itensConsumiveis.push({ descricao: 'Drum Unit', percentual: vu.drum_unit_percentual });
+    var jaTemDrum = itensConsumiveis.some(function (c) { return (c.descricao || '').toLowerCase().indexOf('drum') !== -1; });
+    if (vu.drum_unit_percentual != null && !jaTemDrum) itensConsumiveis.push({ descricao: 'Drum Unit', percentual: vu.drum_unit_percentual });
     if (vu.fuser_unit && vu.fuser_unit.percentual != null) itensConsumiveis.push({ descricao: 'Fuser Unit', percentual: vu.fuser_unit.percentual });
     if (vu.laser_unit && vu.laser_unit.percentual != null) itensConsumiveis.push({ descricao: 'Laser Unit', percentual: vu.laser_unit.percentual });
     if (vu.paper_feeding_kit_mp && vu.paper_feeding_kit_mp.percentual != null) itensConsumiveis.push({ descricao: 'Paper Feeding Kit MP', percentual: vu.paper_feeding_kit_mp.percentual });
@@ -248,7 +249,7 @@ function tpAbrirModalConsumiveis(poderId) {
   if (!itensConsumiveis.length) {
     barrasHtml += '<div style="text-align:center;color:#64748B;padding:20px;background:rgba(255,255,255,0.02);border-radius:10px">Este equipamento nao reportou dados de consumiveis.</div>';
   } else {
-    barrasHtml += itensConsumiveis.map(function (c) {
+    barrasHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 20px">' + itensConsumiveis.map(function (c) {
       var pct = c.percentual != null ? c.percentual : null;
       var corBarra = '#3B82F6';
       if (pct != null) {
@@ -257,7 +258,7 @@ function tpAbrirModalConsumiveis(poderId) {
       var largura = pct != null ? pct : 0;
       var textoPct = pct != null ? pct + '%' : 'sem dado';
 
-      return '<div style="margin-bottom:16px">' +
+      return '<div>' +
         '<div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
         '<span style="font-size:13px;color:#E2E8F0;font-weight:500">' + _esc(c.descricao) + '</span>' +
         '<span style="font-size:13px;color:' + corBarra + ';font-weight:700">' + textoPct + '</span>' +
@@ -265,7 +266,7 @@ function tpAbrirModalConsumiveis(poderId) {
         '<div style="height:10px;background:rgba(255,255,255,0.06);border-radius:6px;overflow:hidden;border:1px solid #1e3a5f">' +
         '<div style="height:100%;width:' + largura + '%;background:linear-gradient(90deg,' + corBarra + 'aa,' + corBarra + ');border-radius:6px;transition:width 0.6s ease;box-shadow:0 0 8px ' + corBarra + '88"></div>' +
         '</div></div>';
-    }).join('');
+    }).join('') + '</div>';
   }
 
   body.innerHTML = cabecalho + statusHtml + contadorHtml + barrasHtml;
